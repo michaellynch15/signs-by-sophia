@@ -1,6 +1,19 @@
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Signs By Sophia — Invoice",
+    description: "Thanks for your order! Here's your invoice link.",
+    openGraph: {
+      title: "Signs By Sophia Invoice",
+      description: "Thanks for your order! Here's your invoice link.",
+      siteName: "Signs by Sophia",
+    },
+  };
+}
 
 const PRODUCT_LABELS: Record<string, string> = {
   banner: "Custom Brown Paper Banner",
