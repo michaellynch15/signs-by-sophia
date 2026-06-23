@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Signs by Sophia <orders@signsbysophia.com>",
+          from: "Signs by Sophia <michael@echelonmade.com>",
           to: [process.env.SOPHIA_EMAIL || "sophia@signsbysophia.com"],
           reply_to: body.email as string,
           subject: `New ${productLabel} order from ${body.name}`,
