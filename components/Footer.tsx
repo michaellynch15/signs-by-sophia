@@ -61,6 +61,11 @@ export default function Footer() {
       <p className="font-display text-xs" style={{ color: "#9A607A" }}>
         © {new Date().getFullYear()} Signs by Sophia · All rights reserved
       </p>
+      <div className="flex items-center justify-center gap-4 mt-3">
+        <a href="/privacy" className="font-display text-xs underline decoration-dotted" style={{ color: "#C4889A" }}>Privacy Policy</a>
+        <span style={{ color: "#F0D0E0" }}>·</span>
+        <a href="/terms" className="font-display text-xs underline decoration-dotted" style={{ color: "#C4889A" }}>Terms of Service</a>
+      </div>
     </footer>
   );
 }
