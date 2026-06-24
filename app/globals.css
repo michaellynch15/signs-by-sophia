@@ -91,6 +91,8 @@ body {
   display: flex;
   width: max-content;
   animation: marquee 65s linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
 }
 .marquee-track:hover {
   animation-play-state: paused;
