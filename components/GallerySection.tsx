@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 const galleryItems = [
   { id: 1,  label: "Kellan's 16th",         src: "/24C09416-CE7C-4F98-AF5D-7E5AA69DDDBC.jpeg" },
   { id: 2,  label: "She's Freshly Graduated", src: "/IMG_6992.jpeg" },
@@ -52,8 +54,14 @@ export default function GallerySection() {
               style={{ width: 260, height: 300 }}
             >
               {item.src ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.src} alt={item.label} className="w-full h-full object-cover" />
+                <Image
+                  src={item.src}
+                  alt={item.label}
+                  width={260}
+                  height={300}
+                  className="w-full h-full object-cover"
+                  priority={i < 5}
+                />
               ) : (
                 <Placeholder item={item} />
               )}
