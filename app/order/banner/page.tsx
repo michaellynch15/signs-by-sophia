@@ -337,7 +337,7 @@ function Step1({ form, set, rush, canAdvance, onNext, photos, setPhotos }: {
           onChange={(e) => set("otherNotes", e.target.value)}
           className="w-full border border-[#EDD8C4] rounded-xl px-3 py-2.5 text-sm font-display text-[#3D1830] bg-white mt-1 outline-none focus:border-[#D4437A] resize-none"
         />
-        <Hint>No inspo photos? Send them via DM after you submit.</Hint>
+
       </Field>
 
       <button
