@@ -83,20 +83,10 @@ function validate(body: OrderBody): string | null {
   return null;
 }
 
-const BANNER_PRICES: Record<string, number> = { "3ft": 65, "4ft": 70, "5ft": 80, "6ft": 90 };
-
 function toRow(body: OrderBody) {
   const str = (k: string) => (body[k] ? String(body[k]) : null);
   const arr = (k: string) =>
     Array.isArray(body[k]) ? (body[k] as string[]).join(", ") : str(k);
-
-  const size = str("size");
-  const eventDate = str("eventDate");
-  const isRush = eventDate
-    ? (new Date(eventDate).getTime() - Date.now()) < 14 * 24 * 60 * 60 * 1000
-    : false;
-  const basePrice = size ? (BANNER_PRICES[size] ?? null) : null;
-  const invoice_amount = basePrice != null ? basePrice + (isRush ? 15 : 0) : null;
 
   return {
     product: str("product"),
@@ -105,11 +95,10 @@ function toRow(body: OrderBody) {
     email: str("email"),
     phone: str("phone"),
     instagram: str("instagram"),
-    event_date: eventDate,
+    event_date: str("eventDate"),
     due_date: str("dueDate"),
-    size,
+    size: str("size"),
     delivery: str("delivery"),
-    invoice_amount,
     shipping_address: str("shippingAddress"),
     theme: str("theme"),
     colors: str("colors"),

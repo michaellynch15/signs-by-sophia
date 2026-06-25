@@ -119,6 +119,33 @@ export async function readSheetRowsWithFormatting(): Promise<{ row: Record<strin
   });
 }
 
+export async function updateOrderPriceInSheet(name: string, amount: number) {
+  const sheets = getSheets();
+
+  const { data } = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: "A:E",
+  });
+
+  const rows = data.values ?? [];
+  // Find the last row matching this name where column E (price) is still empty
+  let targetRow = -1;
+  for (let i = 1; i < rows.length; i++) {
+    const rowName = (rows[i][0] ?? "").trim().toLowerCase();
+    const hasPrice = !!(rows[i][4] ?? "").trim();
+    if (rowName === name.trim().toLowerCase() && !hasPrice) targetRow = i;
+  }
+
+  if (targetRow === -1) return;
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `E${targetRow + 1}`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[`$${amount}`]] },
+  });
+}
+
 export async function pushAllOrdersToSheet(orders: Record<string, unknown>[]) {
   const sheets = getSheets();
   await sheets.spreadsheets.values.clear({
