@@ -249,15 +249,14 @@ function Step1({ form, set, rush, canAdvance, onNext }: {
         <Input placeholder='e.g. "Pink birthday for Emma" or "Graduation luau party"' value={form.theme} onChange={(v) => set("theme", v)} />
       </Field>
 
-      <Field label="What do you want the banner to say? *">
+      <Field label="Exact wording *">
         <textarea
           rows={3}
-          placeholder={"EXACT wording, please!\ne.g. \"Happy 18th Birthday Emma!\""}
+          placeholder={"e.g. \"Happy 18th Birthday Emma!\"\nSpell it exactly as you want it painted."}
           value={form.bannerText}
           onChange={(e) => set("bannerText", e.target.value)}
           className="w-full border border-[#EDD8C4] rounded-xl px-3 py-2.5 text-sm font-display text-[#3D1830] bg-white mt-1 outline-none focus:border-[#D4437A] resize-none"
         />
-        <Hint>Spell it exactly as you want it painted.</Hint>
       </Field>
 
       <Field label="Any other specifics? (colors, fonts, etc.)">
