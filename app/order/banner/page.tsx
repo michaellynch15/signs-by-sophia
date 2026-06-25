@@ -5,6 +5,25 @@ import Link from "next/link";
 
 type Step = 1 | 2;
 
+async function compressImage(file: File, maxPx = 1200, quality = 0.8): Promise<Blob> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => resolve(blob!), "image/jpeg", quality);
+    };
+    img.src = url;
+  });
+}
+
 const SIZES = [
   { label: '3ft × 35"', value: "3ft", price: "$65" },
   { label: '4ft × 35"', value: "4ft", price: "$70" },
@@ -90,8 +109,9 @@ export default function BannerOrderPage() {
     try {
       let photoUrls: string[] = [];
       if (photos.length > 0) {
+        const compressed = await Promise.all(photos.map((f) => compressImage(f)));
         const fd = new FormData();
-        photos.forEach((f) => fd.append("files", f));
+        compressed.forEach((blob, i) => fd.append("files", blob, `photo-${i}.jpg`));
         const up = await fetch("/api/upload", { method: "POST", body: fd });
         if (up.ok) { const d = await up.json(); photoUrls = d.urls ?? []; }
       }
