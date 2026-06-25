@@ -47,6 +47,7 @@ function isRush(dateStr: string): boolean {
 export default function BannerOrderPage() {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>(empty);
+  const [photos, setPhotos] = useState<File[]>([]);
   const [bookingNotice, setBookingNotice] = useState("July 2026 and beyond");
 
   useEffect(() => {
@@ -87,10 +88,17 @@ export default function BannerOrderPage() {
     setSubmitting(true);
     setError("");
     try {
+      let photoUrls: string[] = [];
+      if (photos.length > 0) {
+        const fd = new FormData();
+        photos.forEach((f) => fd.append("files", f));
+        const up = await fetch("/api/upload", { method: "POST", body: fd });
+        if (up.ok) { const d = await up.json(); photoUrls = d.urls ?? []; }
+      }
       const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, product: "banner" }),
+        body: JSON.stringify({ ...form, product: "banner", photos: photoUrls }),
       });
       if (!res.ok) throw new Error();
       setSubmitted(true);
@@ -157,6 +165,8 @@ export default function BannerOrderPage() {
               rush={rush}
               canAdvance={!!canAdvance1()}
               onNext={() => setStep(2)}
+              photos={photos}
+              setPhotos={setPhotos}
             />
           ) : (
             <Step2
@@ -205,12 +215,14 @@ function StepBar({ step }: { step: number }) {
 }
 
 /* ── Step 1: contact + event details ── */
-function Step1({ form, set, rush, canAdvance, onNext }: {
+function Step1({ form, set, rush, canAdvance, onNext, photos, setPhotos }: {
   form: FormData;
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void;
   rush: boolean;
   canAdvance: boolean;
   onNext: () => void;
+  photos: File[];
+  setPhotos: React.Dispatch<React.SetStateAction<File[]>>;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -257,6 +269,44 @@ function Step1({ form, set, rush, canAdvance, onNext }: {
           onChange={(e) => set("bannerText", e.target.value)}
           className="w-full border border-[#EDD8C4] rounded-xl px-3 py-2.5 text-sm font-display text-[#3D1830] bg-white mt-1 outline-none focus:border-[#D4437A] resize-none"
         />
+      </Field>
+
+      <Field label="Inspiration photos (optional)">
+        <p className="font-display text-[10px] text-[#8A5070] mb-2">Upload up to 10 photos — colors, themes, inspo, anything helpful.</p>
+        <label className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors font-display text-sm font-semibold"
+          style={{ borderColor: "#EDD8C4", color: "#9A607A" }}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          {photos.length === 0 ? "Add photos" : `${photos.length}/10 added — tap to add more`}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const incoming = Array.from(e.target.files ?? []);
+              setPhotos((prev) => [...prev, ...incoming].slice(0, 10));
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {photos.length > 0 && (
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {photos.map((f, i) => (
+              <div key={i} className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "1" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  style={{ background: "rgba(0,0,0,0.55)" }}
+                >×</button>
+              </div>
+            ))}
+          </div>
+        )}
       </Field>
 
       <Field label="Any other specifics? (colors, fonts, etc.)">

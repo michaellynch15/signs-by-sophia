@@ -35,6 +35,7 @@ type Order = {
   price: string | null;
   payment_method: string | null;
   date_ordered: string | null;
+  photos: string[] | null;
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -514,6 +515,19 @@ export default function Dashboard() {
                       {selected.quantity && <DetailRow k="Qty" v={selected.quantity} />}
                       {selected.add_ons && <DetailRow k="Add-ons" v={selected.add_ons} />}
                       {selected.other_notes && <DetailRow k="Notes" v={selected.other_notes} />}
+                    </DetailBlock>
+                  )}
+
+                  {selected.photos && selected.photos.length > 0 && (
+                    <DetailBlock label="Inspiration photos">
+                      <div className="grid grid-cols-3 gap-2 mt-1">
+                        {selected.photos.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-xl overflow-hidden" style={{ aspectRatio: "1" }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+                          </a>
+                        ))}
+                      </div>
                     </DetailBlock>
                   )}
 
