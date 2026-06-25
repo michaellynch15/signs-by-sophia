@@ -58,6 +58,9 @@ function buildEmailBody(product: string, body: OrderBody): string {
   if (body.phone) lines.push(`Phone: ${body.phone}`);
   if (body.instagram) lines.push(`Instagram: ${body.instagram}`);
 
+  lines.push(``, `— Dashboard —`);
+  lines.push(`https://www.signsbysophia.com/dashboard`);
+
   return lines.join("\n");
 }
 
