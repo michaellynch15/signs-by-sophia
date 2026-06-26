@@ -142,7 +142,7 @@ export default function JeansOrderPage() {
             Back
           </Link>
           <h1 className="font-script text-4xl mb-1" style={{ color: "#8B5CA8" }}>Order Custom Jeans</h1>
-          <p className="font-display text-sm text-[#7A5590]">Hand-painted denim by Sophia</p>
+          <p className="font-display text-sm text-[#7A5590]">Hand painted jeans for any occasion</p>
         </div>
 
         {/* ── IMPORTANT INFO BOX ── */}
@@ -150,7 +150,7 @@ export default function JeansOrderPage() {
           style={{ background: "#FEF9E8", border: "1.5px solid #F4D06F" }}>
           <p className="font-bold text-sm text-[#2D1A3D] mb-1">Before you order — please read!</p>
           <p className="text-[#5A3A75]">
-            <span className="font-bold">👖 You supply the jeans.</span> Ship them to me, or order a pair online and have them shipped directly to me. I&apos;ll send you a shipping address once your order is confirmed.
+            <span className="font-bold">👖 You supply the jeans.</span> Ship them to me, or order a pair online and have them shipped directly to me. Send to: <span className="font-bold">4104 Castlerock Road, Norman OK 73072</span>
           </p>
           <p className="text-[#5A3A75]">
             <span className="font-bold">🕐 4-week turnaround from when Sophia receives your jeans.</span> Plan your date accordingly — this is not from when you place the order.
@@ -497,7 +497,7 @@ function SuccessScreen({ name, instagram }: { name: string; instagram: string })
           {instagram && ` (She can also reach you at ${instagram})`}
         </p>
         <p>2️⃣ Can&apos;t DM? Text <strong>405-243-1461</strong>.</p>
-        <p>3️⃣ Sophia will send a <strong>shipping address</strong> for you to mail your jeans to.</p>
+        <p>3️⃣ Ship your jeans to: <strong>4104 Castlerock Road, Norman OK 73072</strong></p>
         <p>4️⃣ She&apos;ll send an invoice — <strong>pay to lock in your spot.</strong></p>
         <p>5️⃣ <strong>4-week turnaround</strong> starts when Sophia receives your jeans.</p>
 
