@@ -150,30 +150,22 @@ export default function JeansOrderPage() {
           style={{ background: "#FEF9E8", border: "1.5px solid #F4D06F" }}>
           <p className="font-bold text-sm text-[#2D1A3D] mb-1">Before you order — please read!</p>
           <p className="text-[#5A3A75]">
-            <span className="font-bold">👖 You must supply the jeans.</span> Ship them to Sophia, or buy a pair online and have them delivered directly to her from the store. A shipping address will be provided after you confirm your order.
+            <span className="font-bold">👖 You supply the jeans.</span> Ship them to Sophia, or order a pair online and have them shipped directly to her. A shipping address will be provided once your order is confirmed.
           </p>
           <p className="text-[#5A3A75]">
-            <span className="font-bold">⏱️ Need at least 3 weeks&apos; notice to create your jeans.</span>
+            <span className="font-bold">🕐 4-week turnaround from when Sophia receives your jeans.</span> Plan your date accordingly — this is not from when you place the order.
           </p>
           <p className="text-[#5A3A75]">
-            <span className="font-bold">🕐 Turnaround time is 4–5 weeks from when Sophia receives your jeans</span> — not from when you order.
-          </p>
-          <p className="text-[#5A3A75]">
-            <span className="font-bold">📦 Shipping cost is $12</span> to return your finished jeans.
+            <span className="font-bold">📦 $12 return shipping</span> to get your finished jeans back.
           </p>
           <p className="text-[#5A3A75]">
             <span className="font-bold">🚫 No detailed logos or characters.</span>
           </p>
           <p className="text-[#5A3A75]">
-            <span className="font-bold">📅 Currently only taking orders for {bookingNotice}.</span>
+            <span className="font-bold">📅 Currently booking {bookingNotice}.</span>
           </p>
           <p className="text-[#5A3A75]">
-            After submitting, <strong>DM @signsby.sophia on Instagram to confirm your order.</strong> If you can&apos;t DM,
-            text <strong>405-243-1461</strong>.
-          </p>
-          <p className="text-[#5A3A75]">
-            Once confirmed, an <strong>invoice</strong> will be sent.
-            <strong> Payment is due right after submitting</strong> to secure your spot.
+            After submitting, <strong>DM @signsby.sophia on Instagram</strong> to confirm. Can&apos;t DM? Text <strong>405-243-1461</strong>. An invoice will be sent once confirmed — payment secures your spot.
           </p>
         </div>
 
@@ -273,11 +265,11 @@ function Step1({ form, set, tooSoon, canAdvance, onNext, photos, setPhotos }: {
           className="w-full border border-[#D4C0E8] rounded-xl px-3 py-2.5 text-sm font-display text-[#2D1A3D] bg-white mt-1 outline-none focus:border-[#8B5CA8]"
         />
         <p className="text-[11px] font-display font-bold text-[#5A3A75] mt-1.5">
-          ⏱️ Turnaround is 4–5 weeks from when Sophia receives your jeans — plan accordingly.
+          ⏱️ Turnaround is 4-weeks from when Sophia receives your jeans — plan accordingly.
         </p>
         {tooSoon && form.eventDate && (
           <p className="text-[10px] font-display font-bold text-[#8B5CA8] mt-1">
-            ⚠️ Your date may not allow enough time — remember, the 4–5 week turnaround starts when Sophia receives your jeans, not when you order.
+            ⚠️ Your date may not allow enough time — remember, the 4-week turnaround starts when Sophia receives your jeans, not when you order.
           </p>
         )}
       </Field>
@@ -507,7 +499,7 @@ function SuccessScreen({ name, instagram }: { name: string; instagram: string })
         <p>2️⃣ Can&apos;t DM? Text <strong>405-243-1461</strong>.</p>
         <p>3️⃣ Sophia will send a <strong>shipping address</strong> for you to mail your jeans to.</p>
         <p>4️⃣ She&apos;ll send an invoice — <strong>pay to lock in your spot.</strong></p>
-        <p>5️⃣ <strong>4–5 week turnaround</strong> starts when Sophia receives your jeans.</p>
+        <p>5️⃣ <strong>4-week turnaround</strong> starts when Sophia receives your jeans.</p>
 
         <div className="rounded-xl p-3 mt-1 space-y-1" style={{ background: "#EDE0F8" }}>
           <p className="font-bold text-[#8B5CA8]">💳 Pay now to secure your spot:</p>
