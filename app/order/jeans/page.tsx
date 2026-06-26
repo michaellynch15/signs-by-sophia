@@ -150,7 +150,7 @@ export default function JeansOrderPage() {
           style={{ background: "#FEF9E8", border: "1.5px solid #F4D06F" }}>
           <p className="font-bold text-sm text-[#2D1A3D] mb-1">Before you order — please read!</p>
           <p className="text-[#5A3A75]">
-            <span className="font-bold">👖 You supply the jeans.</span> Ship them to Sophia, or order a pair online and have them shipped directly to her. A shipping address will be provided once your order is confirmed.
+            <span className="font-bold">👖 You supply the jeans.</span> Ship them to me, or order a pair online and have them shipped directly to me. I&apos;ll send you a shipping address once your order is confirmed.
           </p>
           <p className="text-[#5A3A75]">
             <span className="font-bold">🕐 4-week turnaround from when Sophia receives your jeans.</span> Plan your date accordingly — this is not from when you place the order.
