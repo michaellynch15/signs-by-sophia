@@ -79,6 +79,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Order | null>(null);
   const [filter, setFilter] = useState("all");
+  const [productFilter, setProductFilter] = useState<"all" | "banners" | "jeans">("all");
   const [days, setDays] = useState<7 | 30 | 90 | null>(null);
   const [invoiceModal, setInvoiceModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -238,7 +239,11 @@ export default function Dashboard() {
       })
     : orders;
 
-  const filtered = (filter === "all" ? withinPeriod : withinPeriod.filter((o) => o.status === filter))
+  const productFiltered = productFilter === "all" ? withinPeriod
+    : productFilter === "banners" ? withinPeriod.filter((o) => o.product === "banner")
+    : withinPeriod.filter((o) => o.product === "senior-jeans");
+
+  const filtered = (filter === "all" ? productFiltered : productFiltered.filter((o) => o.status === filter))
     .slice()
     .sort((a, b) => {
       const aComplete = isComplete(a);
@@ -255,11 +260,11 @@ export default function Dashboard() {
     });
 
   const counts = {
-    all: withinPeriod.length,
-    new: withinPeriod.filter((o) => o.status === "new").length,
-    invoiced: withinPeriod.filter((o) => o.status === "invoiced").length,
-    paid: withinPeriod.filter((o) => o.status === "paid").length,
-    complete: withinPeriod.filter((o) => o.status === "complete").length,
+    all: productFiltered.length,
+    new: productFiltered.filter((o) => o.status === "new").length,
+    invoiced: productFiltered.filter((o) => o.status === "invoiced").length,
+    paid: productFiltered.filter((o) => o.status === "paid").length,
+    complete: productFiltered.filter((o) => o.status === "complete").length,
   };
 
   return (
@@ -369,7 +374,29 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Filter tabs */}
+        {/* Product filter */}
+        <div className="flex gap-2 mb-3 flex-wrap items-center">
+          <span className="font-display text-xs font-bold uppercase tracking-wider" style={{ color: "#C4889A" }}>Show:</span>
+          {([
+            { key: "all",     label: "All" },
+            { key: "banners", label: "Banners", color: "#D4437A", activeBg: "#D4437A" },
+            { key: "jeans",   label: "Jeans",   color: "#8B5CA8", activeBg: "#8B5CA8" },
+          ] as const).map((p) => (
+            <button
+              key={p.key}
+              onClick={() => setProductFilter(p.key)}
+              className="font-display text-xs font-bold px-4 py-1.5 rounded-full transition-all"
+              style={productFilter === p.key
+                ? { backgroundColor: p.key === "jeans" ? "#8B5CA8" : p.key === "banners" ? "#D4437A" : "#3D1830", color: "white" }
+                : { backgroundColor: "white", color: "#6B3058", border: "1.5px solid #F0D0E0" }
+              }
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Status filter tabs */}
         <div className="flex gap-2 mb-4 flex-wrap">
           {["all", "new", "invoiced", "paid", "complete"].map((f) => (
             <button
@@ -405,14 +432,24 @@ export default function Dashboard() {
               filtered.map((order) => {
                 const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.new;
                 const isSelected = selected?.id === order.id;
+                const isJeans = order.product === "senior-jeans";
+                const isComplete = order.status === "complete";
                 return (
                   <button
                     key={order.id}
                     onClick={() => { setSelected(isSelected ? null : order); setConfirmDelete(false); }}
                     className="w-full text-left rounded-2xl p-4 shadow-sm transition-all"
                     style={{
-                      background: isSelected ? "#FDE8F0" : order.status === "complete" ? "#FEF2F5" : "white",
-                      border: isSelected ? "2px solid #D4437A" : order.status === "complete" ? "2px solid #F5C0CC" : "2px solid transparent",
+                      background: isSelected
+                        ? (isJeans ? "#EDE0F8" : "#FDE8F0")
+                        : isComplete
+                          ? (isJeans ? "#F3EDF8" : "#FEF2F5")
+                          : "white",
+                      border: isSelected
+                        ? `2px solid ${isJeans ? "#8B5CA8" : "#D4437A"}`
+                        : isComplete
+                          ? `2px solid ${isJeans ? "#C5A8D5" : "#F5C0CC"}`
+                          : "2px solid transparent",
                     }}
                   >
                     <div className="flex items-start justify-between gap-3">
