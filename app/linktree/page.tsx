@@ -37,6 +37,16 @@ const LINKS = [
     bg: "#FDE8F0",
   },
   {
+    id: "jeans-order",
+    label: "Order Custom Jeans",
+    sublabel: "Hand-painted denim · you send the jeans, she does the rest",
+    emoji: "👖",
+    href: "/order/jeans",
+    internal: true,
+    accent: "#8B5CA8",
+    bg: "#EDE0F8",
+  },
+  {
     id: "business-guide",
     label: "Banner Business Guide",
     sublabel: "Learn how to start your own banner biz",

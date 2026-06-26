@@ -22,7 +22,7 @@ function buildEmailHtml(product: string, body: OrderBody): string {
       <table style="border-collapse:collapse;width:100%">
         ${field("Event date", body.eventDate)}
         ${field("Theme", body.theme)}
-        ${field("Exact wording", body.bannerText)}
+        ${field(product.includes("Jeans") ? "Design details" : "Exact wording", body.bannerText)}
         ${field("Size", body.size)}
         ${field("Delivery", body.delivery)}
         ${field("Ship to", body.shippingAddress)}
@@ -55,7 +55,7 @@ function validate(body: OrderBody): string | null {
     const hasDate = body.eventDate || body.dueDate;
     if (!hasText || !hasDate) return "Missing required banner fields";
   } else if (product === "senior-jeans") {
-    const hasText = body.textToPaint || body.nameOnItem;
+    const hasText = body.bannerText || body.textToPaint || body.nameOnItem;
     const hasDate = body.eventDate || body.dueDate;
     if (!hasText || !hasDate) return "Missing required jeans fields";
   } else if (product === "tote-bag") {

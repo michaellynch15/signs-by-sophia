@@ -1,138 +1,201 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
-const JEAN_STYLES = [
-  { label: "Straight Leg", desc: "Classic straight cut" },
-  { label: "Bootcut", desc: "Slight flare at ankle" },
-  { label: "Wide Leg", desc: "Relaxed wide-leg fit" },
-  { label: "Skinny", desc: "Slim fitted style" },
-  { label: "I'll provide my own", desc: "Ship or bring your jeans" },
-];
+async function compressImage(file: File, maxPx = 1200, quality = 0.8): Promise<Blob> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => resolve(blob!), "image/jpeg", quality);
+    };
+    img.src = url;
+  });
+}
 
-const PLACEMENT_OPTIONS = [
-  "Leg (one side)", "Leg (both sides)", "Back pocket area",
-  "Waistband", "Full leg wrap", "Custom placement",
-];
-
-const COLOR_OPTIONS = [
-  { name: "Magenta Pink", hex: "#D4437A" },
-  { name: "Lavender", hex: "#C5A8D5" },
-  { name: "Sage Green", hex: "#7ECBA3" },
-  { name: "Butter Yellow", hex: "#F4D06F" },
-  { name: "Coral", hex: "#F4A88A" },
-  { name: "Sky Blue", hex: "#A8D8EA" },
-  { name: "White", hex: "#FFFFFF" },
-  { name: "Gold", hex: "#D4AF37" },
+const JEAN_SIZES = [
+  { label: "Front only", value: "Front only", price: "$70" },
+  { label: "Back only", value: "Back only", price: "$70" },
+  { label: "Front & back", value: "Front and back", price: "$130" },
 ];
 
 interface FormData {
-  jeanStyle: string;
-  size: string;
-  placement: string;
-  textToPaint: string;
-  schoolName: string;
-  graduationYear: string;
-  colors: string[];
-  dueDate: string;
-  addOns: string[];
-  notes: string;
   name: string;
-  email: string;
-  phone: string;
   instagram: string;
+  phone: string;
+  eventDate: string;
+  bannerText: string;
+  otherNotes: string;
+  size: string;
+  delivery: "pickup" | "shipping" | "";
+  shippingAddress: string;
 }
 
 const empty: FormData = {
-  jeanStyle: "",
-  size: "",
-  placement: "",
-  textToPaint: "",
-  schoolName: "",
-  graduationYear: "",
-  colors: [],
-  dueDate: "",
-  addOns: [],
-  notes: "",
   name: "",
-  email: "",
-  phone: "",
   instagram: "",
+  phone: "",
+  eventDate: "",
+  bannerText: "",
+  otherNotes: "",
+  size: "",
+  delivery: "",
+  shippingAddress: "",
 };
+
+function isTooSoon(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return diff < 28 * 24 * 60 * 60 * 1000;
+}
 
 export default function JeansOrderPage() {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>(empty);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [bookingNotice, setBookingNotice] = useState("July 2026 and beyond");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    fetch("/api/settings").then(r => r.json()).then(d => {
+      if (d.booking_notice) setBookingNotice(d.booking_notice);
+    });
+  }, []);
+
   function set<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
-  function toggleColor(name: string) {
-    set("colors", form.colors.includes(name) ? form.colors.filter((c) => c !== name) : [...form.colors, name]);
-  }
-  function toggleAddOn(name: string) {
-    set("addOns", form.addOns.includes(name) ? form.addOns.filter((a) => a !== name) : [...form.addOns, name]);
+
+  const tooSoon = isTooSoon(form.eventDate);
+
+  function canAdvance1() {
+    return (
+      form.name.trim() &&
+      form.phone.trim() &&
+      form.eventDate &&
+      form.bannerText.trim()
+    );
   }
 
-  function canAdvance1() { return form.jeanStyle && form.size && form.placement; }
-  function canAdvance2() { return form.textToPaint.trim() && form.colors.length > 0 && form.dueDate; }
-  function canSubmit() { return form.name.trim() && form.email.trim() && form.phone.trim(); }
+  function canSubmit() {
+    return (
+      form.size &&
+      form.delivery &&
+      (form.delivery === "pickup" || form.shippingAddress.trim())
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     try {
+      let photoUrls: string[] = [];
+      if (photos.length > 0) {
+        const compressed = await Promise.all(photos.map((f) => compressImage(f)));
+        const fd = new FormData();
+        compressed.forEach((blob, i) => fd.append("files", blob, `photo-${i}.jpg`));
+        const up = await fetch("/api/upload", { method: "POST", body: fd });
+        if (up.ok) { const d = await up.json(); photoUrls = d.urls ?? []; }
+      }
       const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, product: "senior-jeans" }),
+        body: JSON.stringify({ ...form, product: "senior-jeans", photos: photoUrls }),
       });
       if (!res.ok) throw new Error();
       setSubmitted(true);
     } catch {
-      setError("Something went wrong. Please try again or DM @signsby.sophia on Instagram.");
+      setError("Something went wrong. Please try again or text 405-243-1461.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (submitted) return <SuccessScreen name={form.name} />;
+  if (submitted) return <SuccessScreen name={form.name} instagram={form.instagram} />;
 
   return (
     <main
-      className="min-h-screen py-12 px-4"
-      style={{ background: "linear-gradient(160deg, #F8F0FF 0%, #F0E8F8 60%, #EDD8F8 100%)" }}
+      className="min-h-screen py-10 px-4"
+      style={{ background: "linear-gradient(160deg, #F8F0FC 0%, #EDE0F8 60%, #E2D0F4 100%)" }}
     >
-      <div className="max-w-xl mx-auto">
-        <div className="text-center mb-8">
-          <Link href="/linktree" className="inline-flex items-center gap-1 text-xs font-display text-[#9A607A] mb-6">
+      <div className="max-w-lg mx-auto">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <Link href="/linktree" className="inline-flex items-center gap-1 text-xs font-display text-[#7A5590] mb-5">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
             Back
           </Link>
-          <h1 className="font-script text-4xl mb-1" style={{ color: "#9B5DC8" }}>Order Senior Jeans</h1>
-          <p className="font-display text-sm text-[#8A5070]">Custom hand-painted denim for graduation season</p>
+          <h1 className="font-script text-4xl mb-1" style={{ color: "#8B5CA8" }}>Order Custom Jeans</h1>
+          <p className="font-display text-sm text-[#7A5590]">Hand-painted denim by Sophia</p>
         </div>
 
-        <StepBar step={step} steps={["Style", "Design", "Contact"]} accent="#9B5DC8" />
+        {/* ── IMPORTANT INFO BOX ── */}
+        <div className="rounded-2xl p-5 mb-6 text-xs font-display leading-relaxed space-y-2"
+          style={{ background: "#FEF9E8", border: "1.5px solid #F4D06F" }}>
+          <p className="font-bold text-sm text-[#2D1A3D] mb-1">Before you order — please read!</p>
+          <p className="text-[#5A3A75]">
+            <span className="font-bold">👖 You purchase the jeans and ship them to Sophia — she customizes and ships them back to you!</span> A shipping address will be provided after you confirm your order.
+          </p>
+          <p className="text-[#5A3A75]">
+            <span className="font-bold">⏱️ 4-week turnaround begins when Sophia receives your jeans</span> — not when you place your order. Plan accordingly!
+          </p>
+          <p className="text-[#5A3A75]">
+            <span className="font-bold">📅 Currently only taking orders for {bookingNotice}.</span>
+          </p>
+          <p className="text-[#5A3A75]">
+            After submitting, <strong>DM @signsby.sophia on Instagram to confirm your order.</strong> If you can&apos;t DM,
+            text <strong>405-243-1461</strong>.
+          </p>
+          <p className="text-[#5A3A75]">
+            Once confirmed, an <strong>invoice</strong> will be sent.
+            <strong> Payment is due right after submitting</strong> to secure your spot.
+          </p>
+          <p className="text-[#5A3A75]">
+            📦 <strong>US shipping available</strong> for returning your finished jeans — price varies by location, included in your invoice.
+          </p>
+        </div>
 
-        <div className="bg-white/80 backdrop-blur rounded-3xl shadow-sm p-6 mt-6 border border-[#E0D0F0]">
-          {step === 1 && (
-            <Step1 form={form} set={set} onNext={() => setStep(2)} canAdvance={!!canAdvance1()} />
-          )}
-          {step === 2 && (
-            <Step2 form={form} set={set} toggleColor={toggleColor} toggleAddOn={toggleAddOn} onBack={() => setStep(1)} onNext={() => setStep(3)} canAdvance={!!canAdvance2()} />
-          )}
-          {step === 3 && (
-            <Step3 form={form} set={set} onBack={() => setStep(2)} onSubmit={handleSubmit} canSubmit={!!canSubmit()} submitting={submitting} error={error} />
+        {/* Step progress */}
+        <StepBar step={step} />
+
+        {/* Form card */}
+        <div className="bg-white/80 backdrop-blur rounded-3xl shadow-sm p-6 mt-5 border border-[#D4C0E8]">
+          {step === 1 ? (
+            <Step1
+              form={form}
+              set={set}
+              tooSoon={tooSoon}
+              canAdvance={!!canAdvance1()}
+              onNext={() => setStep(2)}
+              photos={photos}
+              setPhotos={setPhotos}
+            />
+          ) : (
+            <Step2
+              form={form}
+              set={set}
+              canSubmit={!!canSubmit()}
+              submitting={submitting}
+              error={error}
+              onBack={() => setStep(1)}
+              onSubmit={handleSubmit}
+            />
           )}
         </div>
       </div>
@@ -140,7 +203,9 @@ export default function JeansOrderPage() {
   );
 }
 
-function StepBar({ step, steps, accent }: { step: number; steps: string[]; accent: string }) {
+/* ── Step bar ── */
+function StepBar({ step }: { step: number }) {
+  const steps = ["Your info", "Pricing & delivery"];
   return (
     <div className="flex items-center justify-center gap-2">
       {steps.map((label, i) => {
@@ -151,13 +216,13 @@ function StepBar({ step, steps, accent }: { step: number; steps: string[]; accen
           <div key={label} className="flex items-center gap-2">
             <div className="flex flex-col items-center">
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold font-display transition-all"
-                style={{ background: done || active ? accent : "#E0D0F0", color: done || active ? "white" : "#8A5070" }}>
+                style={{ background: done || active ? "#8B5CA8" : "#D4C0E8", color: done || active ? "white" : "#7A5590" }}>
                 {done ? "✓" : n}
               </div>
-              <span className="text-[10px] font-display mt-1" style={{ color: active ? accent : "#9A607A" }}>{label}</span>
+              <span className="text-[10px] font-display mt-1" style={{ color: active ? "#8B5CA8" : "#7A5590" }}>{label}</span>
             </div>
             {i < steps.length - 1 && (
-              <div className="w-12 h-0.5 mb-4 rounded-full" style={{ background: done ? accent : "#E0D0F0" }} />
+              <div className="w-14 h-0.5 mb-4 rounded-full" style={{ background: done ? "#8B5CA8" : "#D4C0E8" }} />
             )}
           </div>
         );
@@ -166,233 +231,327 @@ function StepBar({ step, steps, accent }: { step: number; steps: string[]; accen
   );
 }
 
-function Step1({ form, set, onNext, canAdvance }: {
+/* ── Step 1: contact + design details ── */
+function Step1({ form, set, tooSoon, canAdvance, onNext, photos, setPhotos }: {
   form: FormData;
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void;
-  onNext: () => void;
+  tooSoon: boolean;
   canAdvance: boolean;
+  onNext: () => void;
+  photos: File[];
+  setPhotos: React.Dispatch<React.SetStateAction<File[]>>;
 }) {
   return (
-    <div className="flex flex-col gap-5">
-      <h2 className="font-display font-bold text-[#3D1830] text-lg">Tell me about your jeans</h2>
+    <div className="flex flex-col gap-4">
+      <h2 className="font-display font-bold text-[#2D1A3D] text-lg">Your info & design details</h2>
 
-      <div>
-        <Label>Jean style *</Label>
-        <div className="flex flex-col gap-2 mt-2">
-          {JEAN_STYLES.map((s) => (
-            <button key={s.label} type="button" onClick={() => set("jeanStyle", s.label)}
-              className="flex items-center justify-between p-3 rounded-xl border text-left transition-all"
-              style={form.jeanStyle === s.label ? { background: "#F0E8F8", borderColor: "#9B5DC8" } : { background: "white", borderColor: "#E0D0F0" }}>
-              <p className="font-display font-bold text-xs text-[#3D1830]">{s.label}</p>
-              <p className="font-display text-[10px] text-[#8A5070]">{s.desc}</p>
-            </button>
-          ))}
-        </div>
-      </div>
+      <Field label="Full name *">
+        <Input placeholder="First and last name" value={form.name} onChange={(v) => set("name", v)} />
+      </Field>
 
-      <div>
-        <Label>Jean size * <span className="text-[10px] font-normal text-[#9A607A]">(if we're sourcing them)</span></Label>
-        <Input placeholder='e.g. "28x30", "Size 6", "XL"' value={form.size} onChange={(v) => set("size", v)} accent="#9B5DC8" />
-      </div>
+      <Field label="Instagram handle">
+        <Input placeholder="@yourhandle" value={form.instagram} onChange={(v) => set("instagram", v)} />
+        <Hint>Drop your handle so we can connect!</Hint>
+      </Field>
 
-      <div>
-        <Label>Where should the design go? *</Label>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {PLACEMENT_OPTIONS.map((p) => (
-            <button key={p} type="button" onClick={() => set("placement", p)}
-              className="px-3 py-1.5 rounded-full text-xs font-display font-semibold border transition-all"
-              style={form.placement === p ? { background: "#9B5DC8", color: "white", borderColor: "#9B5DC8" } : { background: "white", color: "#8A5070", borderColor: "#E0D0F0" }}>
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Field label="Phone number *">
+        <Input type="tel" placeholder="(405) 555-0100" value={form.phone} onChange={(v) => set("phone", v)} />
+      </Field>
 
-      <NextBtn onClick={onNext} disabled={!canAdvance} accent="#9B5DC8" />
-    </div>
-  );
-}
-
-function Step2({ form, set, toggleColor, toggleAddOn, onBack, onNext, canAdvance }: {
-  form: FormData;
-  set: <K extends keyof FormData>(k: K, v: FormData[K]) => void;
-  toggleColor: (n: string) => void;
-  toggleAddOn: (n: string) => void;
-  onBack: () => void;
-  onNext: () => void;
-  canAdvance: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-5">
-      <h2 className="font-display font-bold text-[#3D1830] text-lg">Design details</h2>
-
-      <div>
-        <Label>Text to paint on the jeans *</Label>
-        <textarea rows={2} placeholder={'e.g. "Emma · Class of \'26"\nor "Sophia Santos · NWHS"'}
-          value={form.textToPaint}
-          onChange={(e) => set("textToPaint", e.target.value)}
-          className="w-full border border-[#E0D0F0] rounded-xl px-3 py-2.5 text-sm font-display text-[#3D1830] bg-white mt-1 outline-none resize-none" />
-      </div>
-
-      <div>
-        <Label>School name (optional)</Label>
-        <Input placeholder="Norman North High School" value={form.schoolName} onChange={(v) => set("schoolName", v)} accent="#9B5DC8" />
-      </div>
-
-      <div>
-        <Label>Graduation year (optional)</Label>
-        <Input placeholder="2026" value={form.graduationYear} onChange={(v) => set("graduationYear", v)} accent="#9B5DC8" />
-      </div>
-
-      <div>
-        <Label>Paint colors * <span className="text-[10px] font-normal">(select all that apply)</span></Label>
-        <div className="grid grid-cols-4 gap-2 mt-2">
-          {COLOR_OPTIONS.map((c) => {
-            const selected = form.colors.includes(c.name);
-            return (
-              <button key={c.name} type="button" onClick={() => toggleColor(c.name)} className="flex flex-col items-center gap-1.5">
-                <div className="w-10 h-10 rounded-full border-2 transition-all"
-                  style={{ background: c.hex, borderColor: selected ? "#9B5DC8" : "#E0D0F0", boxShadow: selected ? "0 0 0 2px #9B5DC844" : "none", outline: c.hex === "#FFFFFF" ? "1px solid #E0D0F0" : "none" }} />
-                <span className="text-[9px] font-display text-[#8A5070] text-center leading-tight">{c.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div>
-        <Label>Add-ons (optional)</Label>
-        <div className="flex flex-col gap-2 mt-2">
-          {["School logo/mascot", "Flowers or floral accents", "Glitter paint", "Rush order (within 5 days)"].map((a) => (
-            <label key={a} className="flex items-center gap-2.5 cursor-pointer">
-              <div className="w-4 h-4 rounded flex items-center justify-center border transition-all flex-shrink-0"
-                style={form.addOns.includes(a) ? { background: "#9B5DC8", borderColor: "#9B5DC8" } : { background: "white", borderColor: "#E0D0F0" }}
-                onClick={() => toggleAddOn(a)}>
-                {form.addOns.includes(a) && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-              </div>
-              <span className="font-display text-xs text-[#3D1830]">{a}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <Label>When do you need them by? *</Label>
-        <input type="date" value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)}
+      <Field label="Day you want jeans to arrive *">
+        <input
+          type="date"
+          value={form.eventDate}
+          onChange={(e) => set("eventDate", e.target.value)}
           min={new Date().toISOString().split("T")[0]}
-          className="w-full border border-[#E0D0F0] rounded-xl px-3 py-2.5 text-sm font-display text-[#3D1830] bg-white mt-1 outline-none" />
-      </div>
+          className="w-full border border-[#D4C0E8] rounded-xl px-3 py-2.5 text-sm font-display text-[#2D1A3D] bg-white mt-1 outline-none focus:border-[#8B5CA8]"
+        />
+        <p className="text-[11px] font-display font-bold text-[#5A3A75] mt-1.5">
+          ⏱️ There is a 4-week turnaround time from when Sophia receives your jeans.
+        </p>
+        {tooSoon && form.eventDate && (
+          <p className="text-[10px] font-display font-bold text-[#8B5CA8] mt-1">
+            ⚠️ Your date may not allow enough time — the 4-week turnaround starts when Sophia receives your jeans, not when you order.
+          </p>
+        )}
+      </Field>
 
-      <div>
-        <Label>Additional notes (optional)</Label>
-        <textarea rows={2} placeholder="Inspo, color palette images, special requests..."
-          value={form.notes} onChange={(e) => set("notes", e.target.value)}
-          className="w-full border border-[#E0D0F0] rounded-xl px-3 py-2.5 text-sm font-display text-[#3D1830] bg-white mt-1 outline-none resize-none" />
-      </div>
+      <Field label="Design details *">
+        <textarea
+          rows={3}
+          placeholder={"Describe what you'd like painted — words, numbers, graphics, colors, style...\nBe as specific as possible!"}
+          value={form.bannerText}
+          onChange={(e) => set("bannerText", e.target.value)}
+          className="w-full border border-[#D4C0E8] rounded-xl px-3 py-2.5 text-sm font-display text-[#2D1A3D] bg-white mt-1 outline-none focus:border-[#8B5CA8] resize-none"
+        />
+      </Field>
 
-      <div className="flex gap-3">
-        <BackBtn onClick={onBack} />
-        <NextBtn onClick={onNext} disabled={!canAdvance} accent="#9B5DC8" />
-      </div>
+      <Field label="Inspiration photos (optional)">
+        <p className="font-display text-[10px] text-[#7A5590] mb-2">Upload up to 10 photos — inspo, colors, styles, anything helpful.</p>
+        <label className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors font-display text-sm font-semibold"
+          style={{ borderColor: "#D4C0E8", color: "#7A5590" }}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          {photos.length === 0 ? "Add photos" : `${photos.length}/10 added — tap to add more`}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const incoming = Array.from(e.target.files ?? []);
+              setPhotos((prev) => [...prev, ...incoming].slice(0, 10));
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {photos.length > 0 && (
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {photos.map((f, i) => (
+              <div key={i} className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "1" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  style={{ background: "rgba(0,0,0,0.55)" }}
+                >×</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Field>
+
+      <Field label="Any other specifics?">
+        <textarea
+          rows={2}
+          placeholder="Anything else Sophia should know..."
+          value={form.otherNotes}
+          onChange={(e) => set("otherNotes", e.target.value)}
+          className="w-full border border-[#D4C0E8] rounded-xl px-3 py-2.5 text-sm font-display text-[#2D1A3D] bg-white mt-1 outline-none focus:border-[#8B5CA8] resize-none"
+        />
+      </Field>
+
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={!canAdvance}
+        className="w-full py-3.5 rounded-full font-display font-bold text-sm text-white transition-all mt-2"
+        style={{ background: canAdvance ? "#8B5CA8" : "#D4C0E8" }}
+      >
+        Continue
+      </button>
     </div>
   );
 }
 
-function Step3({ form, set, onBack, onSubmit, canSubmit, submitting, error }: {
+/* ── Step 2: pricing, delivery, payment ── */
+function Step2({ form, set, canSubmit, submitting, error, onBack, onSubmit }: {
   form: FormData;
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void;
-  onBack: () => void;
-  onSubmit: (e: React.FormEvent) => void;
   canSubmit: boolean;
   submitting: boolean;
   error: string;
+  onBack: () => void;
+  onSubmit: (e: React.FormEvent) => void;
 }) {
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
-      <h2 className="font-display font-bold text-[#3D1830] text-lg">Your contact info</h2>
-      <div><Label>Full name *</Label><Input placeholder="Your name" value={form.name} onChange={(v) => set("name", v)} accent="#9B5DC8" /></div>
-      <div><Label>Email address *</Label><Input type="email" placeholder="you@example.com" value={form.email} onChange={(v) => set("email", v)} accent="#9B5DC8" /></div>
-      <div><Label>Phone number *</Label><Input type="tel" placeholder="(405) 555-0100" value={form.phone} onChange={(v) => set("phone", v)} accent="#9B5DC8" /></div>
-      <div><Label>Instagram handle (optional)</Label><Input placeholder="@yourhandle" value={form.instagram} onChange={(v) => set("instagram", v)} accent="#9B5DC8" /></div>
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <h2 className="font-display font-bold text-[#2D1A3D] text-lg">Pricing & delivery</h2>
 
-      <div className="rounded-2xl p-4 text-xs font-display text-[#3D1830] space-y-1.5"
-        style={{ background: "#F0E8F8", border: "1px solid #C5A8D544" }}>
-        <p className="font-bold text-sm mb-2" style={{ color: "#9B5DC8" }}>Order Summary</p>
-        <Row label="Style" value={form.jeanStyle} />
-        <Row label="Size" value={form.size} />
-        <Row label="Placement" value={form.placement} />
-        <Row label="Text" value={form.textToPaint} />
-        {form.schoolName && <Row label="School" value={form.schoolName} />}
-        {form.graduationYear && <Row label="Grad year" value={form.graduationYear} />}
-        <Row label="Colors" value={form.colors.join(", ")} />
-        <Row label="Needed by" value={form.dueDate} />
+      {/* Jeans pricing */}
+      <Field label="Jeans pricing *">
+        <div className="flex flex-col gap-2 mt-1">
+          {JEAN_SIZES.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => set("size", s.value)}
+              className="py-3 px-4 rounded-xl border font-display font-bold text-sm transition-all flex items-center justify-between"
+              style={form.size === s.value
+                ? { background: "#EDE0F8", borderColor: "#8B5CA8", color: "#8B5CA8" }
+                : { background: "white", borderColor: "#D4C0E8", color: "#2D1A3D" }}
+            >
+              <span>{s.label}</span>
+              <span className="text-sm font-bold" style={{ color: form.size === s.value ? "#8B5CA8" : "#7A5590" }}>{s.price}</span>
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      {/* Delivery */}
+      <Field label="How are you receiving your jeans? *">
+        <div className="flex flex-col gap-2 mt-1">
+          {[
+            { val: "pickup", label: "Local pickup", desc: "Norman, OK area" },
+            { val: "shipping", label: "Shipping", desc: "US shipping available · price varies by location" },
+          ].map((opt) => (
+            <button
+              key={opt.val}
+              type="button"
+              onClick={() => set("delivery", opt.val as "pickup" | "shipping")}
+              className="flex items-center justify-between p-3 rounded-xl border text-left transition-all"
+              style={form.delivery === opt.val
+                ? { background: "#EDE0F8", borderColor: "#8B5CA8" }
+                : { background: "white", borderColor: "#D4C0E8" }}
+            >
+              <div>
+                <p className="font-display font-bold text-xs text-[#2D1A3D]">{opt.label}</p>
+                <p className="font-display text-[10px] text-[#7A5590] mt-0.5">{opt.desc}</p>
+              </div>
+              <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                style={{ borderColor: form.delivery === opt.val ? "#8B5CA8" : "#D4C0E8" }}>
+                {form.delivery === opt.val && (
+                  <div className="w-2 h-2 rounded-full" style={{ background: "#8B5CA8" }} />
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      {/* Shipping address */}
+      {form.delivery === "shipping" && (
+        <Field label="Shipping address *">
+          <textarea
+            rows={3}
+            placeholder={"Street address\nCity, State, ZIP"}
+            value={form.shippingAddress}
+            onChange={(e) => set("shippingAddress", e.target.value)}
+            className="w-full border border-[#D4C0E8] rounded-xl px-3 py-2.5 text-sm font-display text-[#2D1A3D] bg-white mt-1 outline-none focus:border-[#8B5CA8] resize-none"
+          />
+        </Field>
+      )}
+
+      {/* Payment info */}
+      <div className="rounded-2xl p-4 text-xs font-display"
+        style={{ background: "#EDE0F8", border: "1.5px solid #C5A8D544" }}>
+        <p className="font-bold text-sm text-[#8B5CA8] mb-2">💳 Payment</p>
+        <p className="text-[#5A3A75] mb-2">
+          Payment is due right after submitting to <strong>secure your spot</strong>. Customization won&apos;t begin until payment is received.
+        </p>
+        <div className="flex gap-4">
+          <div className="flex-1 rounded-xl p-2.5 text-center" style={{ background: "white" }}>
+            <p className="text-[9px] text-[#7A5590] uppercase tracking-widest font-bold">Venmo</p>
+            <p className="font-bold text-[#2D1A3D] mt-0.5">@Sophia-Lynch-25</p>
+          </div>
+          <div className="flex-1 rounded-xl p-2.5 text-center" style={{ background: "white" }}>
+            <p className="text-[9px] text-[#7A5590] uppercase tracking-widest font-bold">Cash App</p>
+            <p className="font-bold text-[#2D1A3D] mt-0.5">$SignsbySophia</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Order summary */}
+      <div className="rounded-2xl p-4 text-xs font-display space-y-1.5"
+        style={{ background: "#F8F0FC", border: "1px solid #D4C0E8" }}>
+        <p className="font-bold text-sm text-[#2D1A3D] mb-2">Order summary</p>
+        <Row label="Name" value={form.name} />
+        <Row label="Phone" value={form.phone} />
+        {form.instagram && <Row label="Instagram" value={form.instagram} />}
+        <Row label="Arrive by" value={form.eventDate} />
+        <Row label="Design details" value={form.bannerText} />
+        {form.otherNotes && <Row label="Notes" value={form.otherNotes} />}
+        {form.size && <Row label="Placement" value={form.size} />}
+        {form.delivery && <Row label="Delivery" value={form.delivery === "pickup" ? "Local pickup" : "Shipping (price varies)"} />}
+        {form.shippingAddress && <Row label="Ship to" value={form.shippingAddress} />}
       </div>
 
       {error && <p className="text-xs font-display text-red-500 text-center">{error}</p>}
 
-      <div className="flex gap-3">
-        <BackBtn onClick={onBack} />
-        <button type="submit" disabled={!canSubmit || submitting}
+      <div className="flex gap-3 mt-1">
+        <button
+          type="button"
+          onClick={onBack}
+          className="px-5 py-3.5 rounded-full font-display font-semibold text-sm border border-[#D4C0E8] text-[#7A5590] transition-all"
+        >
+          Back
+        </button>
+        <button
+          type="submit"
+          disabled={!canSubmit || submitting}
           className="flex-1 py-3.5 rounded-full font-display font-bold text-sm text-white transition-all"
-          style={{ background: canSubmit && !submitting ? "#9B5DC8" : "#E0D0F0" }}>
-          {submitting ? "Sending..." : "Submit Order"}
+          style={{ background: canSubmit && !submitting ? "#8B5CA8" : "#D4C0E8" }}
+        >
+          {submitting ? "Submitting..." : "Submit Order"}
         </button>
       </div>
     </form>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  if (!value) return null;
-  return (
-    <div className="flex justify-between gap-4">
-      <span className="text-[#8A5070] flex-shrink-0">{label}:</span>
-      <span className="text-[#3D1830] text-right">{value}</span>
-    </div>
-  );
-}
-function Label({ children }: { children: React.ReactNode }) {
-  return <p className="font-display font-semibold text-xs text-[#6B3058]">{children}</p>;
-}
-function Input({ placeholder, value, onChange, type = "text", accent }: { placeholder: string; value: string; onChange: (v: string) => void; type?: string; accent: string; }) {
-  return (
-    <input type={type} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)}
-      className="w-full border border-[#E0D0F0] rounded-xl px-3 py-2.5 text-sm font-display text-[#3D1830] bg-white mt-1 outline-none"
-      style={{ borderColor: "#E0D0F0" }}
-      onFocus={(e) => { e.target.style.borderColor = accent; }}
-      onBlur={(e) => { e.target.style.borderColor = "#E0D0F0"; }} />
-  );
-}
-function NextBtn({ onClick, disabled, accent }: { onClick: () => void; disabled: boolean; accent: string }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled}
-      className="flex-1 py-3.5 rounded-full font-display font-bold text-sm text-white transition-all"
-      style={{ background: disabled ? "#E0D0F0" : accent }}>
-      Continue
-    </button>
-  );
-}
-function BackBtn({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick}
-      className="px-5 py-3.5 rounded-full font-display font-semibold text-sm border border-[#E0D0F0] text-[#9A607A] hover:border-[#9A607A] transition-all">
-      Back
-    </button>
-  );
-}
-function SuccessScreen({ name }: { name: string }) {
+/* ── Success ── */
+function SuccessScreen({ name, instagram }: { name: string; instagram: string }) {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 text-center"
-      style={{ background: "linear-gradient(160deg, #F8F0FF 0%, #F0E8F8 60%, #EDD8F8 100%)" }}>
+      style={{ background: "linear-gradient(160deg, #F8F0FC 0%, #EDE0F8 60%, #E2D0F4 100%)" }}>
       <div className="text-6xl mb-6">👖</div>
-      <h1 className="font-script text-4xl mb-3" style={{ color: "#9B5DC8" }}>Order received!</h1>
-      <p className="font-display text-sm text-[#6B3058] max-w-xs mb-2">
-        Thanks {name}! Sophia will reach out within 24–48 hours to confirm and discuss your jeans design.
+      <h1 className="font-script text-4xl mb-3" style={{ color: "#8B5CA8" }}>Order submitted!</h1>
+      <p className="font-display text-sm text-[#5A3A75] max-w-xs mb-1">
+        Thanks {name}! Your order is in.
       </p>
-      <p className="font-display text-xs text-[#9A607A] mb-8">DM <strong>@signsby.sophia</strong> on Instagram with questions.</p>
-      <Link href="/linktree" className="px-8 py-3 rounded-full font-display font-bold text-sm text-white" style={{ background: "#9B5DC8" }}>
+
+      <div className="bg-white/80 rounded-2xl p-5 mt-4 max-w-xs text-left text-xs font-display text-[#5A3A75] space-y-2.5 border border-[#D4C0E8]">
+        <p className="font-bold text-sm text-[#2D1A3D] mb-1">What happens next:</p>
+        <p>1️⃣ <strong>DM @signsby.sophia on Instagram</strong> to confirm your order.
+          {instagram && ` (She can also reach you at ${instagram})`}
+        </p>
+        <p>2️⃣ Can&apos;t DM? Text <strong>405-243-1461</strong>.</p>
+        <p>3️⃣ Sophia will send a <strong>shipping address</strong> for you to mail your jeans to.</p>
+        <p>4️⃣ She&apos;ll send an invoice — <strong>pay to lock in your spot.</strong></p>
+        <p>5️⃣ <strong>4-week turnaround</strong> starts when Sophia receives your jeans.</p>
+
+        <div className="rounded-xl p-3 mt-1 space-y-1" style={{ background: "#EDE0F8" }}>
+          <p className="font-bold text-[#8B5CA8]">💳 Pay now to secure your spot:</p>
+          <p>Venmo: <strong>@Sophia-Lynch-25</strong></p>
+          <p>Cash App: <strong>$SignsbySophia</strong></p>
+        </div>
+      </div>
+
+      <Link href="/linktree" className="mt-8 px-8 py-3 rounded-full font-display font-bold text-sm text-white"
+        style={{ background: "#8B5CA8" }}>
         Back to links
       </Link>
     </main>
+  );
+}
+
+/* ── Shared helpers ── */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="font-display font-semibold text-xs text-[#5A3A75]">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+function Input({ placeholder, value, onChange, type = "text" }: {
+  placeholder: string; value: string; onChange: (v: string) => void; type?: string;
+}) {
+  return (
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full border border-[#D4C0E8] rounded-xl px-3 py-2.5 text-sm font-display text-[#2D1A3D] bg-white mt-1 outline-none focus:border-[#8B5CA8]"
+    />
+  );
+}
+
+function Hint({ children }: { children: React.ReactNode }) {
+  return <p className="text-[10px] font-display text-[#7A5590] mt-1">{children}</p>;
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  if (!value) return null;
+  return (
+    <div className="flex gap-3 justify-between">
+      <span className="text-[#7A5590] flex-shrink-0">{label}:</span>
+      <span className="text-[#2D1A3D] text-right break-words max-w-[60%]">{value}</span>
+    </div>
   );
 }
