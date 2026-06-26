@@ -261,7 +261,7 @@ function Step1({ form, set, rush, canAdvance, onNext, photos, setPhotos }: {
         <Input type="tel" placeholder="(405) 555-0100" value={form.phone} onChange={(v) => set("phone", v)} />
       </Field>
 
-      <Field label="Date of event *">
+      <Field label="Day you want banner to arrive *">
         <input
           type="date"
           value={form.eventDate}
