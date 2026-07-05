@@ -88,6 +88,13 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               {order.size && <DetailRow k="Size" v={order.size} />}
               {order.event_date && <DetailRow k="Event date" v={order.event_date} />}
               {order.delivery && <DetailRow k="Delivery" v={order.delivery === "pickup" ? "Local pickup — Norman, OK" : "Shipping"} />}
+              {order.product === "senior-jeans" && (
+                <div className="mt-3 rounded-xl p-3" style={{ background: "#F3EDF8", border: "1px solid #D4C0E8" }}>
+                  <p className="font-display text-xs font-bold mb-0.5" style={{ color: "#8B5CA8" }}>📦 Ship your jeans to:</p>
+                  <p className="font-display text-xs font-bold" style={{ color: "#2D1A3D" }}>4104 Castlerock Road</p>
+                  <p className="font-display text-xs font-bold" style={{ color: "#2D1A3D" }}>Norman, OK 73072</p>
+                </div>
+              )}
               {order.invoice_note && (
                 <p className="font-display text-xs mt-2 pt-2 border-t" style={{ color: "#6B3058", borderColor: "#F0E4D4" }}>
                   {order.invoice_note}
