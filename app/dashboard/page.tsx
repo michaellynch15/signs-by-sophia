@@ -93,9 +93,10 @@ export default function Dashboard() {
   const [bookingDraft, setBookingDraft] = useState("July 2026 and beyond");
   const [savingNotice, setSavingNotice] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [addressDraft, setAddressDraft] = useState<string | null>(null);
   const [newOrderModal, setNewOrderModal] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
-  const emptyNewOrder = { name: "", date_ordered: "", due_date: "", size: "", price: "", payment_method: "", delivery: "", status: "new", other_notes: "" };
+  const emptyNewOrder = { name: "", date_ordered: "", due_date: "", size: "", price: "", payment_method: "", delivery: "", status: "new", other_notes: "", shipping_address: "" };
   const [newOrder, setNewOrder] = useState(emptyNewOrder);
 
   const fetchOrders = useCallback(async () => {
@@ -227,6 +228,19 @@ export default function Dashboard() {
     setSelected(null);
     setConfirmDelete(false);
     showToast("Order deleted");
+  }
+
+  async function saveAddress() {
+    if (!selected || addressDraft === null) return;
+    await fetch("/api/orders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: selected.id, shipping_address: addressDraft }),
+    });
+    setOrders((prev) => prev.map((o) => o.id === selected.id ? { ...o, shipping_address: addressDraft } : o));
+    setSelected((prev) => prev ? { ...prev, shipping_address: addressDraft } : prev);
+    setAddressDraft(null);
+    showToast("Address saved");
   }
 
   const isComplete = (o: Order) => o.status === "complete";
@@ -437,7 +451,7 @@ export default function Dashboard() {
                 return (
                   <button
                     key={order.id}
-                    onClick={() => { setSelected(isSelected ? null : order); setConfirmDelete(false); }}
+                    onClick={() => { setSelected(isSelected ? null : order); setConfirmDelete(false); setAddressDraft(null); }}
                     className="w-full text-left rounded-2xl p-4 shadow-sm transition-all"
                     style={{
                       background: isSelected
@@ -534,7 +548,42 @@ export default function Dashboard() {
                     {selected.price && <DetailRow k="Price" v={selected.price} />}
                     {selected.payment_method && <DetailRow k="Payment" v={selected.payment_method} />}
                     {selected.delivery && <DetailRow k="Delivery" v={selected.delivery} />}
-                    {selected.shipping_address && <DetailRow k="Ship to" v={selected.shipping_address} />}
+                    {selected.delivery?.toLowerCase() === "shipping" && (
+                      addressDraft !== null ? (
+                        <div className="mt-0.5">
+                          <p className="font-display text-[10px] mb-1" style={{ color: "#8A5070" }}>Ship to:</p>
+                          <textarea
+                            value={addressDraft}
+                            onChange={(e) => setAddressDraft(e.target.value)}
+                            rows={2}
+                            placeholder="Street address, City, State ZIP"
+                            className="w-full text-xs rounded-lg border px-2 py-1.5 resize-none outline-none font-display"
+                            style={{ borderColor: "#F0D0E0" }}
+                          />
+                          <div className="flex gap-2 mt-1">
+                            <button onClick={saveAddress} className="font-display text-xs font-bold px-3 py-1 rounded-lg text-white" style={{ background: "#D4437A" }}>Save</button>
+                            <button onClick={() => setAddressDraft(null)} className="font-display text-xs font-semibold px-3 py-1 rounded-lg" style={{ color: "#9A607A" }}>Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-display text-sm" style={{ color: "#3A2A1E" }}>
+                            <span style={{ color: "#8A5070" }}>Ship to:</span>{" "}
+                            {selected.shipping_address ?? <em style={{ color: "#C4889A" }}>Not provided</em>}
+                          </p>
+                          <button
+                            onClick={() => setAddressDraft(selected.shipping_address ?? "")}
+                            className="font-display text-[10px] font-bold flex-shrink-0"
+                            style={{ color: "#D4437A" }}
+                          >
+                            {selected.shipping_address ? "Edit" : "Add"}
+                          </button>
+                        </div>
+                      )
+                    )}
+                    {selected.shipping_address && selected.delivery?.toLowerCase() !== "shipping" && (
+                      <DetailRow k="Ship to" v={selected.shipping_address} />
+                    )}
                   </DetailBlock>
 
                   {/* Design details */}
@@ -805,6 +854,12 @@ export default function Dashboard() {
                   ))}
                 </div>
               </NewField>
+              {/* Shipping address (shown when delivery is Shipping) */}
+              {newOrder.delivery === "Shipping" && (
+                <NewField label="Shipping Address">
+                  <textarea value={newOrder.shipping_address} onChange={e => setNewOrder(o => ({ ...o, shipping_address: e.target.value }))} placeholder={"Street address\nCity, State, ZIP"} rows={2} className="w-full font-display text-sm px-3 py-2.5 rounded-xl border outline-none focus:border-[#D4437A] resize-none" style={{ borderColor: "#E8B0C8" }} />
+                </NewField>
+              )}
               {/* Notes */}
               <NewField label="Notes">
                 <textarea value={newOrder.other_notes} onChange={e => setNewOrder(o => ({ ...o, other_notes: e.target.value }))} placeholder="Theme, banner text, anything else…" rows={2} className="w-full font-display text-sm px-3 py-2.5 rounded-xl border outline-none focus:border-[#D4437A] resize-none" style={{ borderColor: "#E8B0C8" }} />
