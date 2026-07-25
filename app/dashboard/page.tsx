@@ -94,6 +94,9 @@ export default function Dashboard() {
   const [savingNotice, setSavingNotice] = useState(false);
   const [importing, setImporting] = useState(false);
   const [addressDraft, setAddressDraft] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<{ pageviews: number; visitors: number; topPages: { route: string; pageviews: number; visitors: number }[] } | null>(null);
+  const [analyticsWindow, setAnalyticsWindow] = useState<7 | 30>(7);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [newOrderModal, setNewOrderModal] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const emptyNewOrder = { name: "", date_ordered: "", due_date: "", size: "", price: "", payment_method: "", delivery: "", status: "new", other_notes: "", shipping_address: "" };
@@ -113,6 +116,14 @@ export default function Dashboard() {
       setBookingDraft(d.booking_notice ?? "July 2026 and beyond");
     });
   }, [fetchOrders]);
+
+  useEffect(() => {
+    setAnalyticsLoading(true);
+    fetch(`/api/analytics?days=${analyticsWindow}`)
+      .then(r => r.json())
+      .then(d => { if (!d.error) setAnalytics(d); })
+      .finally(() => setAnalyticsLoading(false));
+  }, [analyticsWindow]);
 
   async function createOrder() {
     if (!newOrder.name.trim()) return showToast("Name is required");
@@ -323,6 +334,67 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-5 py-6">
+        {/* Analytics widget */}
+        {analytics && (
+          <div className="mb-5 rounded-2xl border px-5 py-4" style={{ background: "#FFF8F0", borderColor: "#F0D0E0" }}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-base">📊</span>
+                <span className="font-display text-sm font-bold" style={{ color: "#3D1830" }}>Site Analytics</span>
+                {analyticsLoading && <span className="font-display text-xs" style={{ color: "#C4889A" }}>Refreshing…</span>}
+              </div>
+              <div className="flex gap-1.5">
+                {([7, 30] as const).map(d => (
+                  <button key={d} onClick={() => setAnalyticsWindow(d)}
+                    className="font-display text-xs font-bold px-3 py-1 rounded-full transition-all"
+                    style={analyticsWindow === d
+                      ? { background: "#D4437A", color: "white" }
+                      : { background: "white", color: "#9A607A", border: "1.5px solid #F0D0E0" }}>
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="rounded-xl p-3 text-center" style={{ background: "#FDE8F0" }}>
+                <p className="font-display text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "#D4437A", opacity: 0.7 }}>Page Views</p>
+                <p className="font-display text-3xl font-bold" style={{ color: "#D4437A" }}>{analytics.pageviews.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl p-3 text-center" style={{ background: "#E4F7EF" }}>
+                <p className="font-display text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "#2D9E6B", opacity: 0.7 }}>Visitors</p>
+                <p className="font-display text-3xl font-bold" style={{ color: "#2D9E6B" }}>{analytics.visitors.toLocaleString()}</p>
+              </div>
+            </div>
+
+            {/* Top pages */}
+            {analytics.topPages.length > 0 && (
+              <div>
+                <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Top Pages</p>
+                <div className="space-y-1.5">
+                  {(() => {
+                    const max = Math.max(...analytics.topPages.map(p => p.pageviews), 1);
+                    return analytics.topPages.map((p) => (
+                      <div key={p.route} className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="font-display text-xs truncate" style={{ color: "#3D1830" }}>{p.route}</span>
+                            <span className="font-display text-xs font-bold ml-2 flex-shrink-0" style={{ color: "#9A607A" }}>{p.pageviews.toLocaleString()}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full" style={{ background: "#F0D0E0" }}>
+                            <div className="h-full rounded-full transition-all" style={{ width: `${(p.pageviews / max) * 100}%`, background: "#D4437A" }} />
+                          </div>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Booking notice control */}
         <div className="mb-5 rounded-2xl border px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3"
           style={{ background: "#FFF8F0", borderColor: "#F0D0E0" }}>
