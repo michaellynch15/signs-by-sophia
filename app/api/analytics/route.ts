@@ -16,7 +16,7 @@ async function vercelQuery(path: string, params: Record<string, string>) {
 
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${process.env.VERCEL_TOKEN}` },
-    next: { revalidate: 300 }, // cache 5 min
+    next: { revalidate: 300 },
   });
 
   if (!res.ok) throw new Error(`Vercel API ${res.status}: ${await res.text()}`);
@@ -32,17 +32,25 @@ export async function GET(req: Request) {
   const days = parseInt(searchParams.get("days") ?? "7");
   const since = dateStr(days);
   const until = dateStr(0);
+  const trendBy = days === 1 ? "hour" : "day";
 
   try {
-    const [countData, topPagesData] = await Promise.all([
+    const [countData, topPagesData, referrersData, devicesData, trendData] = await Promise.all([
       vercelQuery("visits/count", { since, until }),
-      vercelQuery("visits/aggregate", { since, until, by: "route", limit: "5" }),
+      vercelQuery("visits/aggregate", { since, until, by: "route", limit: "8" }),
+      vercelQuery("visits/aggregate", { since, until, by: "referrerHostname", limit: "6" }),
+      vercelQuery("visits/aggregate", { since, until, by: "deviceType", limit: "5" }),
+      vercelQuery("visits/aggregate", { since, until, by: trendBy }),
     ]);
 
     return NextResponse.json({
       pageviews: countData.data?.pageviews ?? 0,
       visitors: countData.data?.visitors ?? 0,
       topPages: topPagesData.data ?? [],
+      referrers: referrersData.data ?? [],
+      devices: devicesData.data ?? [],
+      trend: trendData.data ?? [],
+      trendBy,
     });
   } catch (err) {
     console.error("Analytics fetch error:", err);

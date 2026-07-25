@@ -94,8 +94,16 @@ export default function Dashboard() {
   const [savingNotice, setSavingNotice] = useState(false);
   const [importing, setImporting] = useState(false);
   const [addressDraft, setAddressDraft] = useState<string | null>(null);
-  const [analytics, setAnalytics] = useState<{ pageviews: number; visitors: number; topPages: { route: string; pageviews: number; visitors: number }[] } | null>(null);
-  const [analyticsWindow, setAnalyticsWindow] = useState<7 | 30>(7);
+  const [analytics, setAnalytics] = useState<{
+    pageviews: number;
+    visitors: number;
+    topPages: { route: string; pageviews: number; visitors: number }[];
+    referrers: { referrerHostname: string; pageviews: number; visitors: number }[];
+    devices: { deviceType: string; pageviews: number; visitors: number }[];
+    trend: { timestamp: string; pageviews: number; visitors: number }[];
+    trendBy: string;
+  } | null>(null);
+  const [analyticsWindow, setAnalyticsWindow] = useState<1 | 7 | 30 | 90>(7);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [newOrderModal, setNewOrderModal] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
@@ -337,6 +345,8 @@ export default function Dashboard() {
         {/* Analytics widget */}
         {analytics && (
           <div className="mb-5 rounded-2xl border px-5 py-4" style={{ background: "#FFF8F0", borderColor: "#F0D0E0" }}>
+
+            {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-base">📊</span>
@@ -344,13 +354,13 @@ export default function Dashboard() {
                 {analyticsLoading && <span className="font-display text-xs" style={{ color: "#C4889A" }}>Refreshing…</span>}
               </div>
               <div className="flex gap-1.5">
-                {([7, 30] as const).map(d => (
+                {([{ d: 1, label: "24h" }, { d: 7, label: "7d" }, { d: 30, label: "30d" }, { d: 90, label: "90d" }] as const).map(({ d, label }) => (
                   <button key={d} onClick={() => setAnalyticsWindow(d)}
                     className="font-display text-xs font-bold px-3 py-1 rounded-full transition-all"
                     style={analyticsWindow === d
                       ? { background: "#D4437A", color: "white" }
                       : { background: "white", color: "#9A607A", border: "1.5px solid #F0D0E0" }}>
-                    {d}d
+                    {label}
                   </button>
                 ))}
               </div>
@@ -363,35 +373,114 @@ export default function Dashboard() {
                 <p className="font-display text-3xl font-bold" style={{ color: "#D4437A" }}>{analytics.pageviews.toLocaleString()}</p>
               </div>
               <div className="rounded-xl p-3 text-center" style={{ background: "#E4F7EF" }}>
-                <p className="font-display text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "#2D9E6B", opacity: 0.7 }}>Visitors</p>
+                <p className="font-display text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "#2D9E6B", opacity: 0.7 }}>Unique Visitors</p>
                 <p className="font-display text-3xl font-bold" style={{ color: "#2D9E6B" }}>{analytics.visitors.toLocaleString()}</p>
               </div>
             </div>
 
-            {/* Top pages */}
-            {analytics.topPages.length > 0 && (
+            {/* Traffic trend bars */}
+            {analytics.trend.length > 0 && (
+              <div className="mb-4">
+                <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>
+                  Traffic trend
+                </p>
+                <div className="flex items-end gap-0.5 h-16">
+                  {(() => {
+                    const max = Math.max(...analytics.trend.map(t => t.pageviews), 1);
+                    return analytics.trend.map((t, i) => {
+                      const pct = (t.pageviews / max) * 100;
+                      const label = analytics.trendBy === "hour"
+                        ? new Date(t.timestamp).getHours() + "h"
+                        : new Date(t.timestamp).toLocaleDateString("en-US", { month: "numeric", day: "numeric" });
+                      const showLabel = analytics.trendBy === "hour"
+                        ? i % 6 === 0
+                        : analytics.trend.length <= 14 || i % Math.ceil(analytics.trend.length / 10) === 0;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center justify-end gap-0.5 h-full" title={`${t.pageviews} views`}>
+                          <div className="w-full rounded-t-sm transition-all" style={{ height: `${Math.max(pct, 2)}%`, background: "#D4437A", opacity: 0.75 }} />
+                          {showLabel && <span className="font-display text-[8px] text-center leading-none" style={{ color: "#C4889A" }}>{label}</span>}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* Bottom three columns */}
+            <div className="grid grid-cols-3 gap-4">
+
+              {/* Top pages */}
               <div>
                 <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Top Pages</p>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {(() => {
                     const max = Math.max(...analytics.topPages.map(p => p.pageviews), 1);
                     return analytics.topPages.map((p) => (
-                      <div key={p.route} className="flex items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="font-display text-xs truncate" style={{ color: "#3D1830" }}>{p.route}</span>
-                            <span className="font-display text-xs font-bold ml-2 flex-shrink-0" style={{ color: "#9A607A" }}>{p.pageviews.toLocaleString()}</span>
-                          </div>
-                          <div className="h-1.5 rounded-full" style={{ background: "#F0D0E0" }}>
-                            <div className="h-full rounded-full transition-all" style={{ width: `${(p.pageviews / max) * 100}%`, background: "#D4437A" }} />
-                          </div>
+                      <div key={p.route}>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="font-display text-[10px] truncate max-w-[80%]" style={{ color: "#3D1830" }}>{p.route || "/"}</span>
+                          <span className="font-display text-[10px] font-bold ml-1 flex-shrink-0" style={{ color: "#9A607A" }}>{p.pageviews}</span>
+                        </div>
+                        <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
+                          <div className="h-full rounded-full" style={{ width: `${(p.pageviews / max) * 100}%`, background: "#D4437A" }} />
                         </div>
                       </div>
                     ));
                   })()}
                 </div>
               </div>
-            )}
+
+              {/* Traffic sources */}
+              <div>
+                <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Sources</p>
+                <div className="space-y-2">
+                  {(() => {
+                    const max = Math.max(...analytics.referrers.map(r => r.pageviews), 1);
+                    return analytics.referrers.map((r, i) => {
+                      const label = r.referrerHostname || "Direct";
+                      return (
+                        <div key={i}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="font-display text-[10px] truncate max-w-[80%]" style={{ color: "#3D1830" }}>{label}</span>
+                            <span className="font-display text-[10px] font-bold ml-1 flex-shrink-0" style={{ color: "#9A607A" }}>{r.pageviews}</span>
+                          </div>
+                          <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
+                            <div className="h-full rounded-full" style={{ width: `${(r.pageviews / max) * 100}%`, background: "#9A607A" }} />
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Devices */}
+              <div>
+                <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Devices</p>
+                <div className="space-y-2">
+                  {(() => {
+                    const total = analytics.devices.reduce((s, d) => s + d.pageviews, 0) || 1;
+                    return analytics.devices.map((d, i) => {
+                      const pct = Math.round((d.pageviews / total) * 100);
+                      const label = d.deviceType ? d.deviceType.charAt(0).toUpperCase() + d.deviceType.slice(1) : "Unknown";
+                      return (
+                        <div key={i}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="font-display text-[10px]" style={{ color: "#3D1830" }}>{label}</span>
+                            <span className="font-display text-[10px] font-bold" style={{ color: "#9A607A" }}>{pct}%</span>
+                          </div>
+                          <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#2D9E6B" }} />
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+            </div>
           </div>
         )}
 
