@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Dancing_Script, Nunito } from "next/font/google";
 import "./globals.css";
 import { PostHogProvider } from "@/lib/posthog";
+import { Analytics } from "@vercel/analytics/next";
 
 const dancingScript = Dancing_Script({
   variable: "--font-dancing",
@@ -35,6 +36,7 @@ export default function RootLayout({
     <html lang="en" className={`${dancingScript.variable} ${nunito.variable}`}>
       <body className="min-h-screen bg-cream antialiased">
         <PostHogProvider>{children}</PostHogProvider>
+        <Analytics />
       </body>
     </html>
   );
