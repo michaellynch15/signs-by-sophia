@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 
 type Step = 1 | 2;
 
@@ -73,6 +74,7 @@ export default function BannerOrderPage() {
     fetch("/api/settings").then(r => r.json()).then(d => {
       if (d.booking_notice) setBookingNotice(d.booking_notice);
     });
+    track("form_view", { product: "banner" });
   }, []);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -121,6 +123,7 @@ export default function BannerOrderPage() {
         body: JSON.stringify({ ...form, product: "banner", photos: photoUrls }),
       });
       if (!res.ok) throw new Error();
+      track("form_submitted", { product: "banner" });
       setSubmitted(true);
     } catch {
       setError("Something went wrong. Please try again or text 405-243-1461.");

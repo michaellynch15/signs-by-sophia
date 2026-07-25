@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 
 type Step = 1 | 2;
 
@@ -73,6 +74,7 @@ export default function JeansOrderPage() {
     fetch("/api/settings").then(r => r.json()).then(d => {
       if (d.booking_notice) setBookingNotice(d.booking_notice);
     });
+    track("form_view", { product: "jeans" });
   }, []);
 
   function set<K extends keyof FormData>(key: K, value: FormData[K]) {
@@ -117,6 +119,7 @@ export default function JeansOrderPage() {
         body: JSON.stringify({ ...form, product: "senior-jeans", photos: photoUrls }),
       });
       if (!res.ok) throw new Error();
+      track("form_submitted", { product: "jeans" });
       setSubmitted(true);
     } catch {
       setError("Something went wrong. Please try again or text 405-243-1461.");

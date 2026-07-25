@@ -342,6 +342,84 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-5 py-6">
+        {/* Business stats — computed from loaded orders */}
+        {!loading && orders.length > 0 && (() => {
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          const ordersThisWeek = orders.filter(o => new Date(o.created_at) >= weekAgo).length;
+          const ordersThisMonth = orders.filter(o => new Date(o.created_at) >= monthAgo).length;
+          const revenueThisMonth = orders
+            .filter(o => o.invoice_amount && new Date(o.created_at) >= monthAgo)
+            .reduce((sum, o) => sum + (o.invoice_amount ?? 0), 0);
+          const bannerOrders = orders.filter(o => o.product === "banner").length;
+          const jeansOrders = orders.filter(o => o.product === "senior-jeans").length;
+          const completedOrders = orders.filter(o => o.status === "complete").length;
+          const completionRate = orders.length > 0 ? Math.round((completedOrders / orders.length) * 100) : 0;
+          const paidOrders = orders.filter(o => o.status === "paid" || o.status === "complete");
+          const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.invoice_amount ?? 0), 0);
+
+          return (
+            <div className="mb-5 rounded-2xl border px-5 py-4" style={{ background: "#FFF8F0", borderColor: "#F0D0E0" }}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-base">🎀</span>
+                <span className="font-display text-sm font-bold" style={{ color: "#3D1830" }}>Business Stats</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                {[
+                  { label: "Orders this week", value: ordersThisWeek, color: "#D4437A", bg: "#FDE8F0" },
+                  { label: "Orders this month", value: ordersThisMonth, color: "#9A607A", bg: "#FEF5E8" },
+                  { label: "Revenue this month", value: `$${revenueThisMonth.toLocaleString()}`, color: "#2D9E6B", bg: "#E4F7EF" },
+                  { label: "All-time revenue", value: `$${totalRevenue.toLocaleString()}`, color: "#B0456A", bg: "#FADADD" },
+                ].map(s => (
+                  <div key={s.label} className="rounded-xl p-3" style={{ background: s.bg }}>
+                    <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: s.color, opacity: 0.7 }}>{s.label}</p>
+                    <p className="font-display text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
+                  <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Products</p>
+                  <div className="space-y-1.5">
+                    {[
+                      { label: "Banners", count: bannerOrders, color: "#D4437A" },
+                      { label: "Jeans", count: jeansOrders, color: "#8B5CA8" },
+                    ].map(p => {
+                      const pct = orders.length > 0 ? Math.round((p.count / orders.length) * 100) : 0;
+                      return (
+                        <div key={p.label}>
+                          <div className="flex justify-between mb-0.5">
+                            <span className="font-display text-xs" style={{ color: "#3D1830" }}>{p.label}</span>
+                            <span className="font-display text-xs font-bold" style={{ color: p.color }}>{p.count} ({pct}%)</span>
+                          </div>
+                          <div className="h-1.5 rounded-full" style={{ background: "#F0D0E0" }}>
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: p.color }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
+                  <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Order completion</p>
+                  <p className="font-display text-3xl font-bold mb-0.5" style={{ color: "#2D9E6B" }}>{completionRate}%</p>
+                  <p className="font-display text-xs" style={{ color: "#9A607A" }}>{completedOrders} of {orders.length} orders completed</p>
+                </div>
+                <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
+                  <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Form abandonment</p>
+                  <p className="font-display text-xs" style={{ color: "#9A607A" }}>
+                    Tracking active — data will appear after a few days of traffic.
+                  </p>
+                  <p className="font-display text-[10px] mt-1" style={{ color: "#C4889A" }}>Powered by Vercel Analytics custom events</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Analytics widget */}
         {analytics && (
           <div className="mb-5 rounded-2xl border px-5 py-4" style={{ background: "#FFF8F0", borderColor: "#F0D0E0" }}>
@@ -413,71 +491,86 @@ export default function Dashboard() {
               {/* Top pages */}
               <div>
                 <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Top Pages</p>
-                <div className="space-y-2">
-                  {(() => {
+                {analytics.topPages.length === 0
+                  ? <p className="font-display text-[10px]" style={{ color: "#C4889A" }}>Not enough data yet</p>
+                  : (() => {
                     const max = Math.max(...analytics.topPages.map(p => p.pageviews), 1);
-                    return analytics.topPages.map((p) => (
-                      <div key={p.route}>
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="font-display text-[10px] truncate max-w-[80%]" style={{ color: "#3D1830" }}>{p.route || "/"}</span>
-                          <span className="font-display text-[10px] font-bold ml-1 flex-shrink-0" style={{ color: "#9A607A" }}>{p.pageviews}</span>
-                        </div>
-                        <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
-                          <div className="h-full rounded-full" style={{ width: `${(p.pageviews / max) * 100}%`, background: "#D4437A" }} />
-                        </div>
+                    return (
+                      <div className="space-y-2">
+                        {analytics.topPages.map((p) => (
+                          <div key={p.route}>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="font-display text-[10px] truncate max-w-[80%]" style={{ color: "#3D1830" }}>{p.route || "/"}</span>
+                              <span className="font-display text-[10px] font-bold ml-1 flex-shrink-0" style={{ color: "#9A607A" }}>{p.pageviews}</span>
+                            </div>
+                            <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
+                              <div className="h-full rounded-full" style={{ width: `${(p.pageviews / max) * 100}%`, background: "#D4437A" }} />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ));
-                  })()}
-                </div>
+                    );
+                  })()
+                }
               </div>
 
               {/* Traffic sources */}
               <div>
                 <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Sources</p>
-                <div className="space-y-2">
-                  {(() => {
+                {analytics.referrers.length === 0
+                  ? <p className="font-display text-[10px]" style={{ color: "#C4889A" }}>Not enough data yet</p>
+                  : (() => {
                     const max = Math.max(...analytics.referrers.map(r => r.pageviews), 1);
-                    return analytics.referrers.map((r, i) => {
-                      const label = r.referrerHostname || "Direct";
-                      return (
-                        <div key={i}>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="font-display text-[10px] truncate max-w-[80%]" style={{ color: "#3D1830" }}>{label}</span>
-                            <span className="font-display text-[10px] font-bold ml-1 flex-shrink-0" style={{ color: "#9A607A" }}>{r.pageviews}</span>
-                          </div>
-                          <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
-                            <div className="h-full rounded-full" style={{ width: `${(r.pageviews / max) * 100}%`, background: "#9A607A" }} />
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
+                    return (
+                      <div className="space-y-2">
+                        {analytics.referrers.map((r, i) => {
+                          const label = r.referrerHostname || "Direct";
+                          return (
+                            <div key={i}>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="font-display text-[10px] truncate max-w-[80%]" style={{ color: "#3D1830" }}>{label}</span>
+                                <span className="font-display text-[10px] font-bold ml-1 flex-shrink-0" style={{ color: "#9A607A" }}>{r.pageviews}</span>
+                              </div>
+                              <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
+                                <div className="h-full rounded-full" style={{ width: `${(r.pageviews / max) * 100}%`, background: "#9A607A" }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                }
               </div>
 
               {/* Devices */}
               <div>
                 <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Devices</p>
-                <div className="space-y-2">
-                  {(() => {
+                {analytics.devices.length === 0
+                  ? <p className="font-display text-[10px]" style={{ color: "#C4889A" }}>Not enough data yet</p>
+                  : (() => {
                     const total = analytics.devices.reduce((s, d) => s + d.pageviews, 0) || 1;
-                    return analytics.devices.map((d, i) => {
-                      const pct = Math.round((d.pageviews / total) * 100);
-                      const label = d.deviceType ? d.deviceType.charAt(0).toUpperCase() + d.deviceType.slice(1) : "Unknown";
-                      return (
-                        <div key={i}>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="font-display text-[10px]" style={{ color: "#3D1830" }}>{label}</span>
-                            <span className="font-display text-[10px] font-bold" style={{ color: "#9A607A" }}>{pct}%</span>
-                          </div>
-                          <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#2D9E6B" }} />
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
+                    return (
+                      <div className="space-y-2">
+                        {analytics.devices.map((d, i) => {
+                          const pct = Math.round((d.pageviews / total) * 100);
+                          const label = d.deviceType ? d.deviceType.charAt(0).toUpperCase() + d.deviceType.slice(1) : "Unknown";
+                          return (
+                            <div key={i}>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="font-display text-[10px]" style={{ color: "#3D1830" }}>{label}</span>
+                                <span className="font-display text-[10px] font-bold" style={{ color: "#9A607A" }}>{pct}%</span>
+                              </div>
+                              <div className="h-1 rounded-full" style={{ background: "#F0D0E0" }}>
+                                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#2D9E6B" }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                }
               </div>
 
             </div>
