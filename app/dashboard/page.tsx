@@ -74,6 +74,23 @@ const PRODUCT_LABELS: Record<string, string> = {
   "tote-bag":    "Tote Bag",
 };
 
+function parseRevenue(o: Order): number {
+  if (o.price) {
+    // "70+rush+ship=95" → explicit total after "="
+    const eqMatch = o.price.match(/=\s*(\d+(?:\.\d+)?)\s*$/);
+    if (eqMatch) return parseFloat(eqMatch[1]);
+    // "60+10ship", "80+ 10 ship" → sum all numeric parts
+    const nums = o.price.match(/\d+(?:\.\d+)?/g);
+    if (nums) {
+      const total = nums.reduce((sum, n) => sum + parseFloat(n), 0);
+      if (total > 0) return total;
+    }
+  }
+  // invoice_amount is unreliable (stored as concatenated digits); only use when no price string
+  if (o.invoice_amount != null) return o.invoice_amount;
+  return 0;
+}
+
 export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,6 +122,8 @@ export default function Dashboard() {
   } | null>(null);
   const [analyticsWindow, setAnalyticsWindow] = useState<1 | 7 | 30 | 90>(7);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [statsCollapsed, setStatsCollapsed] = useState(true);
+  const [analyticsCollapsed, setAnalyticsCollapsed] = useState(true);
   const [newOrderModal, setNewOrderModal] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const emptyNewOrder = { name: "", date_ordered: "", due_date: "", size: "", price: "", payment_method: "", delivery: "", status: "new", other_notes: "", shipping_address: "" };
@@ -349,73 +368,84 @@ export default function Dashboard() {
           const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           const ordersThisWeek = orders.filter(o => new Date(o.created_at) >= weekAgo).length;
           const ordersThisMonth = orders.filter(o => new Date(o.created_at) >= monthAgo).length;
-          const revenueThisMonth = orders
-            .filter(o => o.invoice_amount && new Date(o.created_at) >= monthAgo)
-            .reduce((sum, o) => sum + (o.invoice_amount ?? 0), 0);
+          const paidOrders = orders.filter(o => o.status === "paid" || o.status === "complete");
+          const revenueThisMonth = paidOrders
+            .filter(o => new Date(o.created_at) >= monthAgo)
+            .reduce((sum, o) => sum + parseRevenue(o), 0);
+          const totalRevenue = paidOrders.reduce((sum, o) => sum + parseRevenue(o), 0);
           const bannerOrders = orders.filter(o => o.product === "banner").length;
           const jeansOrders = orders.filter(o => o.product === "senior-jeans").length;
           const completedOrders = orders.filter(o => o.status === "complete").length;
           const completionRate = orders.length > 0 ? Math.round((completedOrders / orders.length) * 100) : 0;
-          const paidOrders = orders.filter(o => o.status === "paid" || o.status === "complete");
-          const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.invoice_amount ?? 0), 0);
 
           return (
             <div className="mb-5 rounded-2xl border px-5 py-4" style={{ background: "#FFF8F0", borderColor: "#F0D0E0" }}>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-base">🎀</span>
-                <span className="font-display text-sm font-bold" style={{ color: "#3D1830" }}>Business Stats</span>
+              <div className="flex items-center justify-between" style={{ marginBottom: statsCollapsed ? 0 : "1rem" }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🎀</span>
+                  <span className="font-display text-sm font-bold" style={{ color: "#3D1830" }}>Business Stats</span>
+                </div>
+                <button onClick={() => setStatsCollapsed(c => !c)} className="p-1 rounded-lg hover:opacity-60 transition-opacity" style={{ color: "#C4889A" }}>
+                  <svg className="w-4 h-4 transition-transform" style={{ transform: statsCollapsed ? "rotate(0deg)" : "rotate(180deg)" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M6 15l6-6 6 6" />
+                  </svg>
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                {[
-                  { label: "Orders this week", value: ordersThisWeek, color: "#D4437A", bg: "#FDE8F0" },
-                  { label: "Orders this month", value: ordersThisMonth, color: "#9A607A", bg: "#FEF5E8" },
-                  { label: "Revenue this month", value: `$${revenueThisMonth.toLocaleString()}`, color: "#2D9E6B", bg: "#E4F7EF" },
-                  { label: "All-time revenue", value: `$${totalRevenue.toLocaleString()}`, color: "#B0456A", bg: "#FADADD" },
-                ].map(s => (
-                  <div key={s.label} className="rounded-xl p-3" style={{ background: s.bg }}>
-                    <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: s.color, opacity: 0.7 }}>{s.label}</p>
-                    <p className="font-display text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
-                  <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Products</p>
-                  <div className="space-y-1.5">
+              {!statsCollapsed && (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                     {[
-                      { label: "Banners", count: bannerOrders, color: "#D4437A" },
-                      { label: "Jeans", count: jeansOrders, color: "#8B5CA8" },
-                    ].map(p => {
-                      const pct = orders.length > 0 ? Math.round((p.count / orders.length) * 100) : 0;
-                      return (
-                        <div key={p.label}>
-                          <div className="flex justify-between mb-0.5">
-                            <span className="font-display text-xs" style={{ color: "#3D1830" }}>{p.label}</span>
-                            <span className="font-display text-xs font-bold" style={{ color: p.color }}>{p.count} ({pct}%)</span>
-                          </div>
-                          <div className="h-1.5 rounded-full" style={{ background: "#F0D0E0" }}>
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: p.color }} />
-                          </div>
-                        </div>
-                      );
-                    })}
+                      { label: "Orders this week", value: ordersThisWeek, color: "#D4437A", bg: "#FDE8F0" },
+                      { label: "Orders this month", value: ordersThisMonth, color: "#9A607A", bg: "#FEF5E8" },
+                      { label: "Revenue this month", value: `$${revenueThisMonth.toLocaleString()}`, color: "#2D9E6B", bg: "#E4F7EF" },
+                      { label: "All-time revenue", value: `$${totalRevenue.toLocaleString()}`, color: "#B0456A", bg: "#FADADD" },
+                    ].map(s => (
+                      <div key={s.label} className="rounded-xl p-3" style={{ background: s.bg }}>
+                        <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: s.color, opacity: 0.7 }}>{s.label}</p>
+                        <p className="font-display text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
+                      </div>
+                    ))}
                   </div>
-                </div>
-                <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
-                  <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Order completion</p>
-                  <p className="font-display text-3xl font-bold mb-0.5" style={{ color: "#2D9E6B" }}>{completionRate}%</p>
-                  <p className="font-display text-xs" style={{ color: "#9A607A" }}>{completedOrders} of {orders.length} orders completed</p>
-                </div>
-                <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
-                  <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Form abandonment</p>
-                  <p className="font-display text-xs" style={{ color: "#9A607A" }}>
-                    Tracking active — data will appear after a few days of traffic.
-                  </p>
-                  <p className="font-display text-[10px] mt-1" style={{ color: "#C4889A" }}>Powered by Vercel Analytics custom events</p>
-                </div>
-              </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
+                      <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Products</p>
+                      <div className="space-y-1.5">
+                        {[
+                          { label: "Banners", count: bannerOrders, color: "#D4437A" },
+                          { label: "Jeans", count: jeansOrders, color: "#8B5CA8" },
+                        ].map(p => {
+                          const pct = orders.length > 0 ? Math.round((p.count / orders.length) * 100) : 0;
+                          return (
+                            <div key={p.label}>
+                              <div className="flex justify-between mb-0.5">
+                                <span className="font-display text-xs" style={{ color: "#3D1830" }}>{p.label}</span>
+                                <span className="font-display text-xs font-bold" style={{ color: p.color }}>{p.count} ({pct}%)</span>
+                              </div>
+                              <div className="h-1.5 rounded-full" style={{ background: "#F0D0E0" }}>
+                                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: p.color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
+                      <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Order completion</p>
+                      <p className="font-display text-3xl font-bold mb-0.5" style={{ color: "#2D9E6B" }}>{completionRate}%</p>
+                      <p className="font-display text-xs" style={{ color: "#9A607A" }}>{completedOrders} of {orders.length} orders completed</p>
+                    </div>
+                    <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
+                      <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Form abandonment</p>
+                      <p className="font-display text-xs" style={{ color: "#9A607A" }}>
+                        Tracking active — data will appear after a few days of traffic.
+                      </p>
+                      <p className="font-display text-[10px] mt-1" style={{ color: "#C4889A" }}>Powered by Vercel Analytics custom events</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           );
         })()}
@@ -425,25 +455,35 @@ export default function Dashboard() {
           <div className="mb-5 rounded-2xl border px-5 py-4" style={{ background: "#FFF8F0", borderColor: "#F0D0E0" }}>
 
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between" style={{ marginBottom: analyticsCollapsed ? 0 : "1rem" }}>
               <div className="flex items-center gap-2">
                 <span className="text-base">📊</span>
                 <span className="font-display text-sm font-bold" style={{ color: "#3D1830" }}>Site Analytics</span>
-                {analyticsLoading && <span className="font-display text-xs" style={{ color: "#C4889A" }}>Refreshing…</span>}
+                {analyticsLoading && !analyticsCollapsed && <span className="font-display text-xs" style={{ color: "#C4889A" }}>Refreshing…</span>}
               </div>
-              <div className="flex gap-1.5">
-                {([{ d: 1, label: "24h" }, { d: 7, label: "7d" }, { d: 30, label: "30d" }, { d: 90, label: "90d" }] as const).map(({ d, label }) => (
-                  <button key={d} onClick={() => setAnalyticsWindow(d)}
-                    className="font-display text-xs font-bold px-3 py-1 rounded-full transition-all"
-                    style={analyticsWindow === d
-                      ? { background: "#D4437A", color: "white" }
-                      : { background: "white", color: "#9A607A", border: "1.5px solid #F0D0E0" }}>
-                    {label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                {!analyticsCollapsed && (
+                  <div className="flex gap-1.5">
+                    {([{ d: 1, label: "24h" }, { d: 7, label: "7d" }, { d: 30, label: "30d" }, { d: 90, label: "90d" }] as const).map(({ d, label }) => (
+                      <button key={d} onClick={() => setAnalyticsWindow(d)}
+                        className="font-display text-xs font-bold px-3 py-1 rounded-full transition-all"
+                        style={analyticsWindow === d
+                          ? { background: "#D4437A", color: "white" }
+                          : { background: "white", color: "#9A607A", border: "1.5px solid #F0D0E0" }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setAnalyticsCollapsed(c => !c)} className="p-1 rounded-lg hover:opacity-60 transition-opacity" style={{ color: "#C4889A" }}>
+                  <svg className="w-4 h-4 transition-transform" style={{ transform: analyticsCollapsed ? "rotate(0deg)" : "rotate(180deg)" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M6 15l6-6 6 6" />
+                  </svg>
+                </button>
               </div>
             </div>
 
+            {!analyticsCollapsed && (<>
             {/* Stat cards */}
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="rounded-xl p-3 text-center" style={{ background: "#FDE8F0" }}>
@@ -574,6 +614,7 @@ export default function Dashboard() {
               </div>
 
             </div>
+            </>)}
           </div>
         )}
 
