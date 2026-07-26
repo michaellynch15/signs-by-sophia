@@ -373,6 +373,19 @@ export default function Dashboard() {
             .filter(o => new Date(o.created_at) >= monthAgo)
             .reduce((sum, o) => sum + parseRevenue(o), 0);
           const totalRevenue = paidOrders.reduce((sum, o) => sum + parseRevenue(o), 0);
+          const monthlyRevenue = (() => {
+            const map: Record<string, number> = {};
+            for (const o of paidOrders) {
+              const d = new Date(o.created_at);
+              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+              map[key] = (map[key] || 0) + parseRevenue(o);
+            }
+            return Array.from({ length: 6 }, (_, i) => {
+              const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (5 - i));
+              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+              return { key, label: d.toLocaleDateString("en-US", { month: "short" }), revenue: map[key] || 0 };
+            });
+          })();
           const bannerOrders = orders.filter(o => o.product === "banner").length;
           const jeansOrders = orders.filter(o => o.product === "senior-jeans").length;
           const completedOrders = orders.filter(o => o.status === "complete").length;
@@ -406,6 +419,31 @@ export default function Dashboard() {
                         <p className="font-display text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Monthly revenue chart */}
+                  <div className="mb-4 rounded-xl p-3" style={{ background: "white", border: "1px solid #F0D0E0" }}>
+                    <p className="font-display text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "#C4889A" }}>Monthly Revenue</p>
+                    <div className="flex items-end gap-1.5" style={{ height: "52px" }}>
+                      {(() => {
+                        const max = Math.max(...monthlyRevenue.map(m => m.revenue), 1);
+                        return monthlyRevenue.map((m) => (
+                          <div key={m.key} className="flex-1 flex flex-col items-center justify-end gap-0.5" style={{ height: "100%" }}>
+                            {m.revenue > 0 && (
+                              <span className="font-display text-[8px] font-bold leading-none" style={{ color: "#D4437A" }}>
+                                ${Math.round(m.revenue)}
+                              </span>
+                            )}
+                            <div className="w-full rounded-t-sm" style={{
+                              height: `${Math.max((m.revenue / max) * 36, m.revenue > 0 ? 4 : 2)}px`,
+                              background: m.revenue > 0 ? "#D4437A" : "#F0D0E0",
+                              opacity: m.revenue > 0 ? 1 : 0.5,
+                            }} />
+                            <span className="font-display text-[9px] leading-none" style={{ color: "#C4889A" }}>{m.label}</span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
