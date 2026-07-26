@@ -374,17 +374,29 @@ export default function Dashboard() {
             .reduce((sum, o) => sum + parseRevenue(o), 0);
           const totalRevenue = paidOrders.reduce((sum, o) => sum + parseRevenue(o), 0);
           const monthlyRevenue = (() => {
+            const getDate = (o: Order): Date => {
+              const ts = parseDate(o.date_ordered);
+              return (ts !== Infinity) ? new Date(ts) : new Date(o.created_at);
+            };
             const map: Record<string, number> = {};
+            let minTime = Infinity;
             for (const o of paidOrders) {
-              const d = new Date(o.created_at);
+              const d = getDate(o);
+              if (d.getTime() < minTime) minTime = d.getTime();
               const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
               map[key] = (map[key] || 0) + parseRevenue(o);
             }
-            return Array.from({ length: 6 }, (_, i) => {
-              const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (5 - i));
-              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-              return { key, label: d.toLocaleDateString("en-US", { month: "short" }), revenue: map[key] || 0 };
-            });
+            if (!isFinite(minTime) || paidOrders.length === 0) return [];
+            const start = new Date(minTime); start.setDate(1);
+            const end = new Date(); end.setDate(1);
+            const result: { key: string; label: string; revenue: number }[] = [];
+            const cursor = new Date(start);
+            while (cursor <= end) {
+              const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+              result.push({ key, label: cursor.toLocaleDateString("en-US", { month: "short" }), revenue: map[key] || 0 });
+              cursor.setMonth(cursor.getMonth() + 1);
+            }
+            return result;
           })();
           const bannerOrders = orders.filter(o => o.product === "banner").length;
           const jeansOrders = orders.filter(o => o.product === "senior-jeans").length;
