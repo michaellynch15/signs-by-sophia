@@ -124,6 +124,7 @@ export default function Dashboard() {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [statsCollapsed, setStatsCollapsed] = useState(true);
   const [analyticsCollapsed, setAnalyticsCollapsed] = useState(true);
+  const [search, setSearch] = useState("");
   const [newOrderModal, setNewOrderModal] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const emptyNewOrder = { name: "", date_ordered: "", due_date: "", size: "", price: "", payment_method: "", delivery: "", status: "new", other_notes: "", shipping_address: "" };
@@ -283,13 +284,17 @@ export default function Dashboard() {
 
   const isComplete = (o: Order) => o.status === "complete";
 
+  const searched = search.trim()
+    ? orders.filter((o) => o.name?.toLowerCase().includes(search.trim().toLowerCase()))
+    : orders;
+
   const withinPeriod = days
-    ? orders.filter((o) => {
+    ? searched.filter((o) => {
         const due = parseDate(o.due_date ?? o.event_date);
         const now = Date.now();
         return due >= now - 24 * 60 * 60 * 1000 && due <= now + days * 24 * 60 * 60 * 1000;
       })
-    : orders;
+    : searched;
 
   const productFiltered = productFilter === "all" ? withinPeriod
     : productFilter === "banners" ? withinPeriod.filter((o) => o.product === "banner")
@@ -690,6 +695,30 @@ export default function Dashboard() {
           >
             {savingNotice ? "Saving…" : "Save"}
           </button>
+        </div>
+
+        {/* Search by name */}
+        <div className="relative mb-4">
+          <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="#C4889A" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search orders by name…"
+            className="w-full font-display text-sm rounded-xl border pl-10 pr-9 py-2.5 outline-none focus:border-[#D4437A]"
+            style={{ borderColor: "#E8B0C8", color: "#3D1830", background: "white" }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 font-display text-xs font-bold px-1.5 hover:opacity-60 transition-opacity"
+              style={{ color: "#C4889A" }}
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Stats row */}
