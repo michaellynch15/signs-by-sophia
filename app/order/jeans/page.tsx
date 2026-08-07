@@ -26,9 +26,9 @@ async function compressImage(file: File, maxPx = 1200, quality = 0.8): Promise<B
 }
 
 const JEAN_SIZES = [
-  { label: "Front only", value: "Front only", price: "$70" },
-  { label: "Back only", value: "Back only", price: "$70" },
-  { label: "Front & back", value: "Front and back", price: "$130" },
+  { label: "Front only", value: "Front only", price: "$85" },
+  { label: "Back only", value: "Back only", price: "$85" },
+  { label: "Front & back", value: "Front and back", price: "$150" },
 ];
 
 interface FormData {
