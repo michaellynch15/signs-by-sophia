@@ -37,6 +37,16 @@ const LINKS = [
     bg: "#FDE8F0",
   },
   {
+    id: "linen-banner-order",
+    label: "Order a Linen Banner",
+    sublabel: "Custom hand-painted linen banners",
+    emoji: "🧵",
+    href: "/order/linen-banner",
+    internal: true,
+    accent: "#C4886B",
+    bg: "#F5E8DC",
+  },
+  {
     id: "jeans-order",
     label: "Order Custom Jeans",
     sublabel: "Hand-painted denim · you send the jeans, she does the rest",

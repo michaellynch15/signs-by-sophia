@@ -70,6 +70,7 @@ function parseDate(s: string | null | undefined): number {
 
 const PRODUCT_LABELS: Record<string, string> = {
   banner:        "Banner",
+  "linen-banner": "Linen Banner",
   "senior-jeans": "Senior Jeans",
   "tote-bag":    "Tote Bag",
 };

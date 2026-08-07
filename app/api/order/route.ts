@@ -50,7 +50,7 @@ function validate(body: OrderBody): string | null {
   if (!product) return "Missing product";
   if (!body.name) return "Missing contact info";
 
-  if (product === "banner") {
+  if (product === "banner" || product === "linen-banner") {
     const hasText = body.bannerText || body.nameOnBanner || body.nameOnItem;
     const hasDate = body.eventDate || body.dueDate;
     if (!hasText || !hasDate) return "Missing required banner fields";
@@ -102,6 +102,7 @@ function toRow(body: OrderBody) {
 
 const PRODUCT_LABELS: Record<string, string> = {
   banner: "Banner",
+  "linen-banner": "Linen Banner",
   "senior-jeans": "Senior Jeans",
   "tote-bag": "Tote Bag",
 };

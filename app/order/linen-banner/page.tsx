@@ -26,10 +26,8 @@ async function compressImage(file: File, maxPx = 1200, quality = 0.8): Promise<B
 }
 
 const SIZES = [
-  { label: '3ft × 35"', value: "3ft", price: "$75" },
-  { label: '4ft × 35"', value: "4ft", price: "$85" },
-  { label: '5ft × 35"', value: "5ft", price: "$95" },
-  { label: '6ft × 35"', value: "6ft", price: "$105" },
+  { label: '28" × 16"', value: '28x16', price: "$85" },
+  { label: '28" × 48"', value: '28x48', price: "$100" },
 ];
 
 interface FormData {
@@ -64,7 +62,7 @@ function isRush(dateStr: string): boolean {
   return diff < 14 * 24 * 60 * 60 * 1000;
 }
 
-export default function BannerOrderPage() {
+export default function LinenBannerOrderPage() {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>(empty);
   const [photos, setPhotos] = useState<File[]>([]);
@@ -74,7 +72,7 @@ export default function BannerOrderPage() {
     fetch("/api/settings").then(r => r.json()).then(d => {
       if (d.booking_notice) setBookingNotice(d.booking_notice);
     });
-    track("form_view", { product: "banner" });
+    track("form_view", { product: "linen-banner" });
   }, []);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -120,10 +118,10 @@ export default function BannerOrderPage() {
       const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, product: "banner", photos: photoUrls }),
+        body: JSON.stringify({ ...form, product: "linen-banner", photos: photoUrls }),
       });
       if (!res.ok) throw new Error();
-      track("form_submitted", { product: "banner" });
+      track("form_submitted", { product: "linen-banner" });
       setSubmitted(true);
     } catch {
       setError("Something went wrong. Please try again or text 405-243-1461.");
@@ -148,8 +146,8 @@ export default function BannerOrderPage() {
             </svg>
             Back
           </Link>
-          <h1 className="font-script text-4xl mb-1" style={{ color: "#D4437A" }}>Order a Banner</h1>
-          <p className="font-display text-sm text-[#8A5070]">Custom hand-painted kraft paper banners</p>
+          <h1 className="font-script text-4xl mb-1" style={{ color: "#D4437A" }}>Order a Linen Banner</h1>
+          <p className="font-display text-sm text-[#8A5070]">Custom hand-painted linen banners</p>
         </div>
 
         {/* ── IMPORTANT INFO BOX ── */}
@@ -376,8 +374,8 @@ function Step2({ form, set, rush, canSubmit, submitting, error, onBack, onSubmit
         {/* Pricing image */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/banner-pricing.png"
-          alt="Banner prices: 3ft×35″ $75, 4ft×35″ $85, 5ft×35″ $95, 6ft×35″ $105"
+          src="/linen-pricing.png"
+          alt='Linen banner prices: 28"×16" $85, 28"×48" $100'
           className="w-full rounded-xl mt-2 mb-3"
           style={{ border: "1.5px solid #EDD8C4" }}
         />
@@ -386,14 +384,14 @@ function Step2({ form, set, rush, canSubmit, submitting, error, onBack, onSubmit
             <button
               key={s.value}
               type="button"
-              onClick={() => set("size", s.value)}
+              onClick={() => set("size", s.label)}
               className="py-3 px-2 rounded-xl border font-display font-bold text-sm transition-all flex flex-col items-center gap-0.5"
-              style={form.size === s.value
+              style={form.size === s.label
                 ? { background: "#FDE8F0", borderColor: "#D4437A", color: "#D4437A" }
                 : { background: "white", borderColor: "#EDD8C4", color: "#3D1830" }}
             >
               <span>{s.label}</span>
-              <span className="text-xs font-semibold" style={{ color: form.size === s.value ? "#D4437A" : "#8A5070" }}>{s.price}</span>
+              <span className="text-xs font-semibold" style={{ color: form.size === s.label ? "#D4437A" : "#8A5070" }}>{s.price}</span>
             </button>
           ))}
         </div>
@@ -476,7 +474,7 @@ function Step2({ form, set, rush, canSubmit, submitting, error, onBack, onSubmit
         <Row label="Theme" value={form.theme} />
         <Row label="Banner text" value={form.bannerText} />
         {form.otherNotes && <Row label="Notes" value={form.otherNotes} />}
-        {form.size && <Row label="Size" value={`${form.size} × 35"`} />}
+        {form.size && <Row label="Size" value={form.size} />}
         {form.delivery && <Row label="Delivery" value={form.delivery === "pickup" ? "Local pickup" : "Shipping (price varies)"} />}
         {form.shippingAddress && <Row label="Ship to" value={form.shippingAddress} />}
       </div>
