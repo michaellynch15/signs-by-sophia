@@ -364,6 +364,14 @@ function Step2({ form, set, canSubmit, submitting, error, onBack, onSubmit }: {
 
       {/* Jeans pricing */}
       <Field label="Jeans pricing *">
+        {/* Pricing image */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/jeans-pricing.png"
+          alt="Painted jeans prices: Front only $85, Back only $85, Front + back $150"
+          className="w-full rounded-xl mt-2 mb-3"
+          style={{ border: "1.5px solid #D4C0E8" }}
+        />
         <div className="flex flex-col gap-2 mt-1">
           {JEAN_SIZES.map((s) => (
             <button
