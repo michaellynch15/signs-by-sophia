@@ -75,6 +75,18 @@ const PRODUCT_LABELS: Record<string, string> = {
   "tote-bag":    "Tote Bag",
 };
 
+// Base item prices by product + size — keep in sync with the SIZES/JEAN_SIZES
+// arrays on each order form (app/order/banner, /linen-banner, /jeans).
+const SIZE_PRICES: Record<string, Record<string, number>> = {
+  banner: { "3ft": 75, "4ft": 85, "5ft": 95, "6ft": 105 },
+  "linen-banner": { "28x16": 85, "28x48": 100 },
+  "senior-jeans": { "Front only": 85, "Back only": 85, "Front and back": 150 },
+};
+
+function basePriceFor(order: Order): number | null {
+  return SIZE_PRICES[order.product]?.[order.size ?? ""] ?? null;
+}
+
 function parseRevenue(o: Order): number {
   if (o.price) {
     // "70+rush+ship=95" → explicit total after "="
@@ -102,6 +114,7 @@ export default function Dashboard() {
   const [invoiceModal, setInvoiceModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [invoiceAmount, setInvoiceAmount] = useState("");
+  const [invoiceShipping, setInvoiceShipping] = useState("");
   const [invoiceNote, setInvoiceNote] = useState("");
   const [invoiceLink, setInvoiceLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -221,13 +234,15 @@ export default function Dashboard() {
     showToast("Status updated");
   }
 
+  const invoiceTotal = (Number(invoiceAmount) || 0) + (Number(invoiceShipping) || 0);
+
   async function generateInvoice() {
-    if (!selected || !invoiceAmount) return;
+    if (!selected || !invoiceTotal) return;
     setSending(true);
     const res = await fetch("/api/invoice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId: selected.id, amount: invoiceAmount, note: invoiceNote }),
+      body: JSON.stringify({ orderId: selected.id, amount: invoiceTotal, note: invoiceNote }),
     });
     setSending(false);
     if (res.ok) {
@@ -235,9 +250,9 @@ export default function Dashboard() {
       const fullUrl = `${window.location.origin}${data.url}`;
       setInvoiceLink(fullUrl);
       setOrders((prev) => prev.map((o) =>
-        o.id === selected.id ? { ...o, status: "invoiced", invoice_amount: Number(invoiceAmount), invoice_sent_at: new Date().toISOString() } : o
+        o.id === selected.id ? { ...o, status: "invoiced", invoice_amount: invoiceTotal, invoice_sent_at: new Date().toISOString() } : o
       ));
-      setSelected((prev) => prev ? { ...prev, status: "invoiced", invoice_amount: Number(invoiceAmount), invoice_sent_at: new Date().toISOString() } : prev);
+      setSelected((prev) => prev ? { ...prev, status: "invoiced", invoice_amount: invoiceTotal, invoice_sent_at: new Date().toISOString() } : prev);
     } else {
       showToast("Failed to generate invoice");
     }
@@ -254,8 +269,18 @@ export default function Dashboard() {
     setInvoiceModal(false);
     setInvoiceLink(null);
     setInvoiceAmount("");
+    setInvoiceShipping("");
     setInvoiceNote("");
     setCopied(false);
+  }
+
+  function openInvoiceModal() {
+    if (!selected) return;
+    const base = basePriceFor(selected);
+    setInvoiceAmount(base != null ? String(base) : "");
+    setInvoiceShipping("");
+    setInvoiceLink(null);
+    setInvoiceModal(true);
   }
 
   async function deleteOrder(id: string) {
@@ -1014,7 +1039,7 @@ export default function Dashboard() {
                 {/* Actions */}
                 <div className="px-5 py-4 border-t space-y-2" style={{ borderColor: "#F0E4D4" }}>
                   <button
-                    onClick={() => { setInvoiceModal(true); setInvoiceLink(null); }}
+                    onClick={openInvoiceModal}
                     className="w-full font-display font-bold text-sm py-3 rounded-xl text-white transition-all hover:opacity-90"
                     style={{ background: "#D4437A" }}
                   >
@@ -1113,7 +1138,7 @@ export default function Dashboard() {
               <div className="px-6 py-5 space-y-4">
                 <div>
                   <label className="font-display text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "#9A607A" }}>
-                    Amount
+                    Item price {selected.size && `(${selected.size})`}
                   </label>
                   <div className="flex items-center gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: "#F0D0E0" }}>
                     <span className="font-display font-bold text-lg" style={{ color: "#9A607A" }}>$</span>
@@ -1127,13 +1152,43 @@ export default function Dashboard() {
                       autoFocus
                     />
                   </div>
+                  <p className="font-display text-[10px] mt-1" style={{ color: basePriceFor(selected) != null ? "#9A607A" : "#C4437A" }}>
+                    {basePriceFor(selected) != null
+                      ? "Auto-filled from size — adjust here if a rush fee or discount applies."
+                      : "Couldn't auto-detect a price for this size — enter it manually."}
+                  </p>
+                </div>
+                <div>
+                  <label className="font-display text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "#9A607A" }}>
+                    Shipping cost
+                  </label>
+                  <div className="flex items-center gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: "#F0D0E0" }}>
+                    <span className="font-display font-bold text-lg" style={{ color: "#9A607A" }}>$</span>
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      value={invoiceShipping}
+                      onChange={(e) => setInvoiceShipping(e.target.value)}
+                      className="flex-1 outline-none font-display text-lg font-bold bg-transparent"
+                      style={{ color: "#3A2A1E" }}
+                    />
+                  </div>
+                  {selected.delivery?.toLowerCase() !== "shipping" && (
+                    <p className="font-display text-[10px] mt-1" style={{ color: "#9A607A" }}>
+                      Leave at $0 for local pickup.
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: "#FDE8F0" }}>
+                  <span className="font-display text-sm font-bold" style={{ color: "#9A607A" }}>Total</span>
+                  <span className="font-display text-2xl font-bold" style={{ color: "#D4437A" }}>${invoiceTotal.toFixed(2)}</span>
                 </div>
                 <div>
                   <label className="font-display text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "#9A607A" }}>
                     Note (optional)
                   </label>
                   <textarea
-                    placeholder="e.g. Includes rush fee, shipping included…"
+                    placeholder="e.g. Includes rush fee…"
                     value={invoiceNote}
                     onChange={(e) => setInvoiceNote(e.target.value)}
                     rows={2}
@@ -1146,9 +1201,9 @@ export default function Dashboard() {
                 </div>
                 <button
                   onClick={generateInvoice}
-                  disabled={!invoiceAmount || sending}
+                  disabled={!invoiceTotal || sending}
                   className="w-full font-display font-bold text-sm py-3 rounded-xl text-white transition-all"
-                  style={{ background: "#D4437A", opacity: invoiceAmount && !sending ? 1 : 0.4 }}
+                  style={{ background: "#D4437A", opacity: invoiceTotal && !sending ? 1 : 0.4 }}
                 >
                   {sending ? "Generating…" : "Generate Invoice Link"}
                 </button>
