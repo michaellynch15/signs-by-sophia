@@ -54,31 +54,31 @@ function orderToRow(order: Record<string, unknown>): string[] {
 export async function appendOrderToSheet(order: Record<string, unknown>) {
   const sheets = getSheets();
 
-  // Read column A to find the actual last row with data (ignores empty pre-expanded rows)
-  const { data: colA } = await sheets.spreadsheets.values.get({
+  // values.append finds the next row on Google's side atomically. The previous
+  // version read column A to compute a row index, then wrote to it separately —
+  // two concurrent orders could both read the same "last row" and the second
+  // write would silently overwrite the first's data instead of erroring, which
+  // is how 14 orders went missing from the sheet over two months with zero logs.
+  const { data: a1 } = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: "A:A",
+    range: "A1",
   });
 
-  const lastRow = colA.values?.length ?? 0;
-
-  // If sheet is empty, write headers first then data on row 2
-  if (lastRow === 0) {
-    await sheets.spreadsheets.values.update({
+  if (!a1.values?.length) {
+    await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
-      range: "A1",
+      range: APPEND_RANGE,
       valueInputOption: "RAW",
-      requestBody: { values: [HEADERS, orderToRow(order)] },
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [HEADERS] },
     });
-    return;
   }
 
-  // Write to the next row immediately after the last one with data
-  const nextRow = lastRow + 1;
-  await sheets.spreadsheets.values.update({
+  await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: `A${nextRow}`,
+    range: APPEND_RANGE,
     valueInputOption: "RAW",
+    insertDataOption: "INSERT_ROWS",
     requestBody: { values: [orderToRow(order)] },
   });
 }
