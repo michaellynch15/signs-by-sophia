@@ -17,9 +17,21 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const PRODUCT_LABELS: Record<string, string> = {
   banner: "Custom Brown Paper Banner",
+  "linen-banner": "Custom Linen Banner",
   "senior-jeans": "Custom Senior Jeans",
   "tote-bag": "Custom Tote Bag",
 };
+
+// Matches the $15 / <2-weeks-notice rule on the banner & linen-banner order forms.
+const RUSH_FEE = 15;
+
+function isRushOrder(o: { product: string; event_date: string | null; due_date: string | null; created_at: string }): boolean {
+  if (o.product !== "banner" && o.product !== "linen-banner") return false;
+  const eventTime = new Date(o.event_date ?? o.due_date ?? "").getTime();
+  const orderedTime = new Date(o.created_at).getTime();
+  if (isNaN(eventTime) || isNaN(orderedTime)) return false;
+  return eventTime - orderedTime < 14 * 24 * 60 * 60 * 1000;
+}
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,6 +45,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   if (!order || !order.invoice_amount) notFound();
 
   const amount = Number(order.invoice_amount);
+  const rush = isRushOrder(order);
   const shortId = id.slice(0, 8).toUpperCase();
   const productLabel = PRODUCT_LABELS[order.product] ?? order.product;
   const dateStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -110,6 +123,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               <p className="font-display font-bold" style={{ fontSize: 48, color: "#D4437A", lineHeight: 1 }}>
                 ${amount % 1 === 0 ? amount : amount.toFixed(2)}
               </p>
+              {rush && (
+                <p className="font-display text-xs font-bold mt-2" style={{ color: "#9A607A" }}>
+                  ⚡ Includes ${RUSH_FEE} rush fee <span className="font-normal">(less than 2 weeks&apos; notice)</span>
+                </p>
+              )}
             </div>
 
             {/* Payment buttons */}

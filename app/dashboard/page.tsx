@@ -87,6 +87,18 @@ function basePriceFor(order: Order): number | null {
   return SIZE_PRICES[order.product]?.[order.size ?? ""] ?? null;
 }
 
+// Matches the $15 / <2-weeks-notice rule on the banner & linen-banner order forms.
+const RUSH_FEE = 15;
+const RUSH_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+function isRushOrder(order: Order): boolean {
+  if (order.product !== "banner" && order.product !== "linen-banner") return false;
+  const eventTime = new Date(order.event_date ?? order.due_date ?? "").getTime();
+  const orderedTime = new Date(order.created_at).getTime();
+  if (isNaN(eventTime) || isNaN(orderedTime)) return false;
+  return eventTime - orderedTime < RUSH_WINDOW_MS;
+}
+
 function parseRevenue(o: Order): number {
   if (o.price) {
     // "70+rush+ship=95" → explicit total after "="
@@ -234,7 +246,8 @@ export default function Dashboard() {
     showToast("Status updated");
   }
 
-  const invoiceTotal = (Number(invoiceAmount) || 0) + (Number(invoiceShipping) || 0);
+  const invoiceRushFee = selected && isRushOrder(selected) ? RUSH_FEE : 0;
+  const invoiceTotal = (Number(invoiceAmount) || 0) + (Number(invoiceShipping) || 0) + invoiceRushFee;
 
   async function generateInvoice() {
     if (!selected || !invoiceTotal) return;
@@ -1154,7 +1167,7 @@ export default function Dashboard() {
                   </div>
                   <p className="font-display text-[10px] mt-1" style={{ color: basePriceFor(selected) != null ? "#9A607A" : "#C4437A" }}>
                     {basePriceFor(selected) != null
-                      ? "Auto-filled from size — adjust here if a rush fee or discount applies."
+                      ? "Auto-filled from size — adjust here for a discount if needed."
                       : "Couldn't auto-detect a price for this size — enter it manually."}
                   </p>
                 </div>
@@ -1179,6 +1192,14 @@ export default function Dashboard() {
                     </p>
                   )}
                 </div>
+                {invoiceRushFee > 0 && (
+                  <div className="rounded-xl px-3 py-2.5 flex items-center justify-between" style={{ background: "#FEF5E8", border: "1px solid #F4D06F" }}>
+                    <span className="font-display text-xs font-bold" style={{ color: "#9A607A" }}>
+                      ⚡ Rush fee <span className="font-normal">(less than 2 weeks&apos; notice)</span>
+                    </span>
+                    <span className="font-display text-sm font-bold" style={{ color: "#D4437A" }}>+${invoiceRushFee.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: "#FDE8F0" }}>
                   <span className="font-display text-sm font-bold" style={{ color: "#9A607A" }}>Total</span>
                   <span className="font-display text-2xl font-bold" style={{ color: "#D4437A" }}>${invoiceTotal.toFixed(2)}</span>
