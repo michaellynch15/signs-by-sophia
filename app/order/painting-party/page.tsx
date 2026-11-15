@@ -163,7 +163,7 @@ export default function PaintingPartyPage() {
             🎨 <strong>${PRICE_PER_PAINTER} per painter</strong>, up to {MAX_PAINTERS} painters. All materials and supplies are provided — you just need a painting space, chairs and tables.
           </p>
           <p className="text-[#2E5A44]">
-            After submitting, <strong>DM @signsby.sophia on Instagram to confirm.</strong> Can&apos;t DM? Text <strong>405-243-1461</strong>.
+            After submitting, <strong>text 405-243-1461</strong> to confirm your party.
           </p>
         </div>
 
@@ -460,9 +460,8 @@ function SuccessScreen({ name }: { name: string }) {
 
       <div className="bg-white/80 rounded-2xl p-5 mt-4 max-w-xs text-left text-xs font-display text-[#2E5A44] space-y-2.5 border" style={{ borderColor: BORDER }}>
         <p className="font-bold text-sm text-[#1F3D2E] mb-1">What happens next:</p>
-        <p>1️⃣ <strong>DM @signsby.sophia on Instagram</strong> to confirm your party.</p>
-        <p>2️⃣ Can&apos;t DM? Text <strong>405-243-1461</strong>.</p>
-        <p>3️⃣ Sophia will confirm the details, including any travel fee if the drive is over 35 minutes.</p>
+        <p>1️⃣ <strong>Text 405-243-1461</strong> to confirm your party.</p>
+        <p>2️⃣ Sophia will confirm the details, including any travel fee if the drive is over 35 minutes.</p>
       </div>
 
       <Link href="/linktree" className="mt-8 px-8 py-3 rounded-full font-display font-bold text-sm text-white"
