@@ -32,6 +32,16 @@ const products = [
     bg: "#F0E8F8",
   },
   {
+    id: "painting-party",
+    name: "Painting Party",
+    emoji: "🎨",
+    description:
+      "Book Sophia for a guided painting class at your party. Everyone paints, all supplies are provided — $30 per painter, up to 8. Local Oklahoma parties only.",
+    accent: "#4F9E78",
+    bg: "#E4F5EA",
+    cta: "Book a Painting Party",
+  },
+  {
     id: "tote-bag",
     name: "Tote Bag",
     emoji: "👜",
@@ -63,6 +73,7 @@ const products = [
 const ORDER_LINKS: Record<string, string> = {
   "banner": "/order/banner",
   "senior-jeans": "/order/jeans",
+  "painting-party": "/order/painting-party",
   "tote-bag": "/order/tote",
 };
 
@@ -168,7 +179,7 @@ export default function ProductsSection() {
               className="mt-2 self-start font-display font-bold text-sm px-5 py-2.5 rounded-full border-2"
               style={{ borderColor: product.accent, color: product.accent }}
             >
-              Order This
+              {"cta" in product ? product.cta : "Order This"}
             </span>
           </a>
         ))}
