@@ -107,10 +107,10 @@ export default function ProductsSection() {
       {/* Heading */}
       <div className="text-center mb-12">
         <p className="font-display text-xs font-bold tracking-widest uppercase text-[#9A607A] mb-2">
-          What I make
+          What I offer
         </p>
         <h2 className="font-script text-5xl md:text-6xl" style={{ color: "#3D1830" }}>
-          What can I make for you?
+          What do I offer?
         </h2>
         <p className="font-display text-[#6B3058] mt-3 text-base max-w-lg mx-auto">
           Every piece is completely custom — you choose the colors, text, and theme.
