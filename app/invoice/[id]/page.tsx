@@ -19,6 +19,7 @@ const PRODUCT_LABELS: Record<string, string> = {
   banner: "Custom Brown Paper Banner",
   "linen-banner": "Custom Linen Banner",
   "senior-jeans": "Custom Senior Jeans",
+  "painting-party": "Painting Party",
   "tote-bag": "Custom Tote Bag",
 };
 
@@ -97,10 +98,20 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             <div className="py-4 space-y-2">
               <p className="font-display text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#C4889A" }}>Order</p>
               <p className="font-display font-bold text-sm" style={{ color: "#3A2A1E" }}>{productLabel}</p>
-              {order.banner_text && <DetailRow k="Text" v={order.banner_text} />}
-              {order.size && <DetailRow k="Size" v={order.size} />}
-              {order.event_date && <DetailRow k="Event date" v={order.event_date} />}
-              {order.delivery && <DetailRow k="Delivery" v={order.delivery === "pickup" ? "Local pickup — Norman, OK" : "Shipping"} />}
+              {order.banner_text && <DetailRow k={order.product === "painting-party" ? "Painting ideas" : "Text"} v={order.banner_text} />}
+              {order.product === "painting-party" ? (
+                <>
+                  {order.event_date && <DetailRow k="Party date" v={order.event_date} />}
+                  {order.size && <DetailRow k="Painters / start" v={order.size} />}
+                  {order.shipping_address && <DetailRow k="Location" v={order.shipping_address} />}
+                </>
+              ) : (
+                <>
+                  {order.size && <DetailRow k="Size" v={order.size} />}
+                  {order.event_date && <DetailRow k="Event date" v={order.event_date} />}
+                  {order.delivery && <DetailRow k="Delivery" v={order.delivery === "pickup" ? "Local pickup — Norman, OK" : "Shipping"} />}
+                </>
+              )}
               {order.product === "senior-jeans" && (
                 <div className="mt-3 rounded-xl p-3" style={{ background: "#F3EDF8", border: "1px solid #D4C0E8" }}>
                   <p className="font-display text-xs font-bold mb-0.5" style={{ color: "#8B5CA8" }}>📦 Ship your jeans to:</p>

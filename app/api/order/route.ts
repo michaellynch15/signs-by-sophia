@@ -22,10 +22,10 @@ function buildEmailHtml(product: string, body: OrderBody): string {
       <table style="border-collapse:collapse;width:100%">
         ${field("Event date", body.eventDate)}
         ${field("Theme", body.theme)}
-        ${field(product.includes("Jeans") ? "Design details" : "Exact wording", body.bannerText)}
-        ${field("Size", body.size)}
+        ${field(product.includes("Jeans") ? "Design details" : product === "Painting Party" ? "Painting ideas" : "Exact wording", body.bannerText)}
+        ${field(product === "Painting Party" ? "Painters / start time" : "Size", body.size)}
         ${field("Delivery", body.delivery)}
-        ${field("Ship to", body.shippingAddress)}
+        ${field(product === "Painting Party" ? "Party address" : "Ship to", body.shippingAddress)}
         ${field("Other notes", body.otherNotes)}
       </table>
       <hr style="border:none;border-top:1px solid #F0E4D4;margin:20px 0" />
@@ -58,6 +58,10 @@ function validate(body: OrderBody): string | null {
     const hasText = body.bannerText || body.textToPaint || body.nameOnItem;
     const hasDate = body.eventDate || body.dueDate;
     if (!hasText || !hasDate) return "Missing required jeans fields";
+  } else if (product === "painting-party") {
+    if (!body.eventDate || !body.shippingAddress || !body.phone || !body.size) {
+      return "Missing required painting party fields";
+    }
   } else if (product === "tote-bag") {
     const hasText = body.textToPaint || body.nameOnItem;
     const hasDate = body.eventDate || body.dueDate;
@@ -104,6 +108,7 @@ const PRODUCT_LABELS: Record<string, string> = {
   banner: "Banner",
   "linen-banner": "Linen Banner",
   "senior-jeans": "Senior Jeans",
+  "painting-party": "Painting Party",
   "tote-bag": "Tote Bag",
 };
 

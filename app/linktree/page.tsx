@@ -57,6 +57,16 @@ const LINKS = [
     bg: "#EDE0F8",
   },
   {
+    id: "painting-party",
+    label: "Book a Painting Party",
+    sublabel: "A guided painting class at your party · local only",
+    emoji: "🎨",
+    href: "/order/painting-party",
+    internal: true,
+    accent: "#4F9E78",
+    bg: "#E4F5EA",
+  },
+  {
     id: "business-guide",
     label: "Banner Business Guide",
     sublabel: "Learn how to start your own banner biz",

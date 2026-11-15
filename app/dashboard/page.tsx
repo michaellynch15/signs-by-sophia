@@ -72,6 +72,7 @@ const PRODUCT_LABELS: Record<string, string> = {
   banner:        "Banner",
   "linen-banner": "Linen Banner",
   "senior-jeans": "Senior Jeans",
+  "painting-party": "Painting Party",
   "tote-bag":    "Tote Bag",
 };
 
@@ -84,6 +85,10 @@ const SIZE_PRICES: Record<string, Record<string, number>> = {
 };
 
 function basePriceFor(order: Order): number | null {
+  if (order.product === "painting-party") {
+    const painters = Number(order.quantity);
+    return painters > 0 ? painters * 30 : null;
+  }
   return SIZE_PRICES[order.product]?.[order.size ?? ""] ?? null;
 }
 
@@ -957,7 +962,7 @@ export default function Dashboard() {
                     {selected.date_ordered && <DetailRow k="Date ordered" v={selected.date_ordered} />}
                     {selected.due_date && <DetailRow k="Due date" v={selected.due_date} />}
                     {selected.event_date && <DetailRow k="Event date" v={selected.event_date} />}
-                    {selected.size && <DetailRow k="Size" v={selected.size} />}
+                    {selected.size && <DetailRow k={selected.product === "painting-party" ? "Painters / time" : "Size"} v={selected.size} />}
                     {selected.price && <DetailRow k="Price" v={selected.price} />}
                     {selected.payment_method && <DetailRow k="Payment" v={selected.payment_method} />}
                     {selected.delivery && <DetailRow k="Delivery" v={selected.delivery} />}
@@ -995,7 +1000,7 @@ export default function Dashboard() {
                       )
                     )}
                     {selected.shipping_address && selected.delivery?.toLowerCase() !== "shipping" && (
-                      <DetailRow k="Ship to" v={selected.shipping_address} />
+                      <DetailRow k={selected.product === "painting-party" ? "Party address" : "Ship to"} v={selected.shipping_address} />
                     )}
                   </DetailBlock>
 
@@ -1173,7 +1178,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <label className="font-display text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "#9A607A" }}>
-                    Shipping cost
+                    {selected.product === "painting-party" ? "Travel fee" : "Shipping cost"}
                   </label>
                   <div className="flex items-center gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: "#F0D0E0" }}>
                     <span className="font-display font-bold text-lg" style={{ color: "#9A607A" }}>$</span>
@@ -1186,7 +1191,11 @@ export default function Dashboard() {
                       style={{ color: "#3A2A1E" }}
                     />
                   </div>
-                  {selected.delivery?.toLowerCase() !== "shipping" && (
+                  {selected.product === "painting-party" ? (
+                    <p className="font-display text-[10px] mt-1" style={{ color: "#9A607A" }}>
+                      Only if the drive is over 35 minutes — otherwise leave at $0.
+                    </p>
+                  ) : selected.delivery?.toLowerCase() !== "shipping" && (
                     <p className="font-display text-[10px] mt-1" style={{ color: "#9A607A" }}>
                       Leave at $0 for local pickup.
                     </p>
