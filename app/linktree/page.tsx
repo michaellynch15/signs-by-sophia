@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
+import { Snowfall, LightString, SantaHat } from "@/components/ChristmasDecor";
+import { CHRISTMAS } from "@/lib/seasonal";
 
 
 const SOCIAL = [
@@ -100,11 +102,16 @@ export default function LinktreePage() {
       className="min-h-screen flex flex-col items-center px-4 py-12 pb-20"
       style={{ background: "linear-gradient(160deg, #FFF8F0 0%, #FDEEE0 60%, #FDE4CC 100%)" }}
     >
+      <Snowfall />
+      <LightString className="fixed top-0 left-0 right-0 z-30" />
+
       {/* Profile */}
       <div className="flex flex-col items-center mb-8 mt-2">
         {/* Avatar */}
+        <div className="relative mb-4">
+        <SantaHat className="absolute -top-7 -right-5 w-[68px] z-10 rotate-[14deg] drop-shadow" />
         <div
-          className="rounded-full overflow-hidden mb-4 shadow-lg"
+          className="rounded-full overflow-hidden shadow-lg"
           style={{ width: 110, height: 110, border: "3px solid #D4437A" }}
         >
           {/* Replace src with actual photo — add /public/sophia.jpg */}
@@ -133,6 +140,7 @@ export default function LinktreePage() {
             }}
           />
         </div>
+        </div>
 
         <h1 className="font-script text-3xl mb-1" style={{ color: "#D4437A" }}>
           Signs by Sophia
@@ -141,6 +149,11 @@ export default function LinktreePage() {
         <p className="font-display text-sm text-[#6B3058] text-center max-w-xs leading-snug">
           Custom hand-painted banners for any occasion ✨
         </p>
+        {CHRISTMAS && (
+          <p className="font-display text-xs font-bold mt-2" style={{ color: "#2E8B57" }}>
+            🎄 Happy Holidays! 🎄
+          </p>
+        )}
 
         {/* Social icons */}
         <div className="flex items-center gap-5 mt-4">
