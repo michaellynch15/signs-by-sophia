@@ -116,32 +116,3 @@ body {
   background: inherit;
   clip-path: ellipse(20px 20px at 10% 100%) ellipse(20px 20px at 30% 100%);
 }
-
-/* ── Christmas decor (toggle in lib/seasonal.ts) ── */
-.snowflake {
-  position: absolute;
-  top: -6vh;
-  color: #FFFFFF;
-  text-shadow: 0 0 3px #8FB8E0, 0 0 6px #B9D6F2;
-  animation: snowfall linear infinite;
-  will-change: transform;
-}
-
-@keyframes snowfall {
-  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
-  100% { transform: translate3d(var(--drift, 20px), 112vh, 0) rotate(360deg); }
-}
-
-.xmas-bulb {
-  animation: twinkle 2.4s ease-in-out infinite;
-}
-
-@keyframes twinkle {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.4; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .snowflake { animation: none; opacity: 0 !important; }
-  .xmas-bulb { animation: none; }
-}

@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LightString, Holly } from "@/components/ChristmasDecor";
-import { CHRISTMAS } from "@/lib/seasonal";
 
 export default function HeroSection() {
   const [bookingNotice, setBookingNotice] = useState<string | null>(null);
@@ -22,15 +20,12 @@ export default function HeroSection() {
         backgroundSize: "60px 60px",
       }}
     >
-      <LightString className="absolute left-0 right-0 top-[60px] z-10" />
       <div className="flex flex-col items-center text-center w-full pt-16 md:pt-0">
         {/* Kraft paper banner */}
         <div
           className="kraft-paper relative w-full max-w-3xl mx-auto flex flex-col items-center justify-center py-12 px-10 md:py-16 md:px-16 shadow-2xl rounded-sm mb-10"
         >
           <BannerFlags />
-          <Holly className="absolute -bottom-5 -left-4 w-16 md:w-20 z-10" />
-          <Holly className="absolute -bottom-5 -right-4 w-16 md:w-20 z-10 -scale-x-100" />
           <TapeStrip className="absolute -top-3 left-16 rotate-[-7deg]" />
           <TapeStrip className="absolute -top-3 right-16 rotate-[7deg]" />
           <TapeStrip className="absolute -top-3 left-1/2 -translate-x-1/2" />
@@ -80,11 +75,6 @@ export default function HeroSection() {
         <p className="mt-5 text-xs md:text-sm font-display text-[#9A607A] font-semibold">
           Norman, OK · US Shipping Available
         </p>
-        {CHRISTMAS && (
-          <p className="mt-3 text-sm font-display font-bold" style={{ color: "#2E8B57" }}>
-            🎄 Happy Holidays from Signs by Sophia 🎄
-          </p>
-        )}
       </div>
     </section>
   );
@@ -102,9 +92,7 @@ function TapeStrip({ className }: { className?: string }) {
 }
 
 function BannerFlags() {
-  const colors = CHRISTMAS
-    ? ["#D93232","#2E8B57","#F4C542","#D93232","#2E8B57","#F4C542","#D93232","#2E8B57","#F4C542"]
-    : ["#F2A7C3","#7ECBA3","#C5A8D5","#F4D06F","#F4A88A","#F2A7C3","#7ECBA3","#C5A8D5","#F4D06F"];
+  const colors = ["#F2A7C3","#7ECBA3","#C5A8D5","#F4D06F","#F4A88A","#F2A7C3","#7ECBA3","#C5A8D5","#F4D06F"];
   return (
     <div className="absolute top-0 left-0 right-0 overflow-hidden pointer-events-none" style={{ height: 38 }}>
       <svg viewBox="0 0 900 38" className="w-full h-full" preserveAspectRatio="none">
