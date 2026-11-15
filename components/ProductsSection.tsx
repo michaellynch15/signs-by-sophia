@@ -33,7 +33,7 @@ const products = [
   },
   {
     id: "painting-party",
-    name: "Painting Party",
+    name: "Book a Painting Party",
     emoji: "🎨",
     description:
       "Book Sophia for a guided painting class at your party. Everyone paints, all supplies are provided — $30 per painter, up to 8. Local Oklahoma parties only.",
@@ -61,7 +61,7 @@ const products = [
   },
   {
     id: "how-to-book",
-    name: "How-To Book",
+    name: "Banner Business Guide",
     emoji: "📖",
     description:
       "Learn Sophia's techniques yourself. A step-by-step guide to painting your own brown paper banners at home — fonts, layouts, and all.",
